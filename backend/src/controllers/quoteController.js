@@ -1,7 +1,7 @@
 import { Quote } from '../models/Quote.js';
 import { Invoice } from '../models/Invoice.js';
 import { Product } from '../models/Product.js';
-import { Business } from '../models/Business.js';
+import Business from '../models/businessModel.js';
 
 // Crear una nueva cotización
 export const createQuote = async (req, res) => {

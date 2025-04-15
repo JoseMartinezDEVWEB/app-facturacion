@@ -12,6 +12,7 @@ import  Categorias  from './pages/page/Categorias';
 import  Facturas  from './pages/page/Facturas';
 import GastoHome from './pages/page/GastoHome';
 import { ClienteForm } from './pages/page/ClienteForm';
+import BusinessSettings from './pages/page/BusinessSettings';
 
 // Nuevas páginas para las características añadidas
 import FacturaDetalle from './pages/page/FacturaDetalle';
@@ -85,6 +86,9 @@ const App = () => {
               <Route path="retenciones/:id" element={<DetalleRetencion />} />
               <Route path="retenciones/:id/editar" element={<EditarRetencion />} />
               <Route path="crear-retencion/:invoiceId" element={<CrearRetencion />} />
+
+              {/* Ruta para configuración del negocio */}
+              <Route path="configuracion" element={<BusinessSettings />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

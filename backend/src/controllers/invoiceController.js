@@ -1,5 +1,5 @@
 import { Invoice } from '../models/Invoice.js';
-import { Business } from '../models/Business.js';
+import Business from '../models/businessModel.js';
 import { Product } from '../models/Product.js';
 import { DailyReport } from '../models/DailyReport.js';
 

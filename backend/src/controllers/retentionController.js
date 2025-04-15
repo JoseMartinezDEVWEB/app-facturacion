@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import { Retention } from '../models/retentionModel.js';
 import { Invoice } from '../models/Invoice.js';
-import { Business } from '../models/Business.js';
+import Business from '../models/businessModel.js';
 import generatePDF from '../utils/pdfGenerator.js';
 
 // @desc    Obtener todas las retenciones con filtros
