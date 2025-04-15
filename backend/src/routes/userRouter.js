@@ -1,7 +1,9 @@
 
 import express from 'express';
-import { login, createUser, getUsers, createInitialAdmin } from '../controllers/userController.js';
+import { login, createUser, getUsers, createInitialAdmin, getUserInfo } from '../controllers/userController.js';
 import {authMiddleware, checkRole} from '../middleware/authmiddleware.js';
+import auth from '../middleware/auth.js';
+
 
 const router = express.Router();
 
@@ -22,6 +24,9 @@ router.get(
   checkRole(['admin', 'encargado']), 
   getUsers
 );
+
+router.get('/info', auth, getUserInfo);
+router.get('/users/info', authMiddleware, getUserInfo);
 
 // Ruta para crear el admin inicial (sin autenticación)
 router.post('/register-admin', createInitialAdmin);

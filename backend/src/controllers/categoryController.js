@@ -50,7 +50,7 @@ export const createCategory = async (req, res) => {
     if (error.code === 11000) { // Duplicate key error
       return res.status(400).json({
         status: 'error',
-        message: 'Category name already exists'
+        message: 'El nombre de la categoría ya existe'
       });
     }
     res.status(500).json({

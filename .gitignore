@@ -1,3 +1,16 @@
+# Dependencias
+node_modules/
+/node_modules
+*/node_modules
+
+# Archivos de entorno
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env
+backend/.env
 
 # Logs
 logs
@@ -8,18 +21,36 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Directorio de compilación
+/dist
+/build
+frontend/dist
+backend/dist
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
-.DS_Store
+.vscode
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Archivos de bloqueo de paquetes
+# package-lock.json
+# yarn.lock
+
+# Archivos de cobertura de prueba
+coverage/
+
+# Directorios de caché
+.cache/
+.npm/

@@ -106,7 +106,7 @@ export const createInitialAdmin = async (req, res) => {
       const adminExists = await User.findOne({ role: 'admin' });
       if (adminExists) {
         return res.status(400).json({ 
-          message: 'An admin user already exists' 
+          message: 'el admin ya existe' 
         });
       }
   
@@ -136,3 +136,28 @@ export const createInitialAdmin = async (req, res) => {
       });
     }
   };
+
+  export const getUserInfo = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId).select('-password');
+
+        if (!user) {
+            return res.status(404).json({
+                msg: 'Usuario no encontrado'
+            });
+        }
+
+        res.json({
+            nombre: user.nombre,
+            rol: user.rol,
+            email: user.email
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: 'Error del servidor'
+        });
+    }
+};

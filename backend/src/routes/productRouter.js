@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { authMiddleware, checkRole } from '../middleware/authmiddleware.js';
-import { createProduct, updateProduct, deleteProduct, getProducts, getProductById } from '../controllers/productController.js';
+import { createProduct, updateProduct, deleteProduct, getProducts, getProductById, getProductByBarcode } from '../controllers/productController.js';
 
 const router = express.Router();
 
@@ -71,6 +71,20 @@ router.delete(
   checkRole(['admin', 'encargado']),
   deleteProduct
 );
+
+router.get('/products/barcode/:barcode', async (req, res) => {
+  try {
+    const product = await Product.findOne({ barcode: req.params.barcode });
+    if (!product) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/barcode/:barcode',  getProductByBarcode);
 
 // Rutas públicas (accesibles para todos los usuarios autenticados)
 router.get('/', authMiddleware, getProducts);

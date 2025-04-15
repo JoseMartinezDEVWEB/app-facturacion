@@ -6,106 +6,163 @@ import mongoose from 'mongoose';
 
 
 export const createProduct = async (req, res) => {
-    try {
-        // Verificar autenticación y roles permitidos
-        if (!req.user || !req.user._id) {
-            return res.status(401).json({
-                status: 'error',
-                message: 'Usuario no autenticado'
-            });
+  try {
+      // Verificar autenticación y roles permitidos
+      if (!req.user || !req.user._id) {
+          return res.status(401).json({
+              status: 'error',
+              message: 'Usuario no autenticado'
+          });
+      }
+
+      if (!['admin', 'encargado'].includes(req.user.role)) {
+          return res.status(403).json({
+              status: 'error',
+              message: 'No tienes permisos para crear productos'
+          });
+      }
+
+      const productData = req.body;
+
+      // Validar campos requeridos
+      const requiredFields = ['name', 'unitType', 'purchasePrice', 'salePrice', 'category'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+
+      if (missingFields.length > 0) {
+          return res.status(400).json({
+              status: 'error',
+              message: 'Faltan campos requeridos',
+              missingFields
+          });
+      }
+
+      // Si se proporciona un proveedor, verificar que existe y asociarlo
+      if (productData.provider) {
+  const provider = await Cliente.findOne({
+    _id: productData.provider,
+    role: 'proveedor'
+  });
+  
+  if (!provider) {
+    return res.status(404).json({
+      status: 'error',
+      message: 'Proveedor no encontrado'
+    });
+  }
+
+  // Manejo de compra a crédito
+if (productData.creditPurchase && productData.creditPurchase.isCredit) {
+  // Validar que el término de pago es válido
+  const validTerms = ['15dias', '30dias', '45dias', '60dias', 'otro'];
+  if (!validTerms.includes(productData.creditPurchase.paymentTerm)) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Término de pago no válido'
+    });
+  }
+  
+  // Calcular fecha de vencimiento si no se proporcionó
+  if (!productData.creditPurchase.dueDate) {
+    const dueDate = new Date();
+    const term = productData.creditPurchase.paymentTerm;
+    
+    if (term === '15dias') {
+      dueDate.setDate(dueDate.getDate() + 15);
+    } else if (term === '30dias') {
+      dueDate.setDate(dueDate.getDate() + 30);
+    } else if (term === '45dias') {
+      dueDate.setDate(dueDate.getDate() + 45);
+    } else if (term === '60dias') {
+      dueDate.setDate(dueDate.getDate() + 60);
+    }
+    
+    productData.creditPurchase.dueDate = dueDate;
+  }
+  
+  // Inicializar como no pagado
+  productData.creditPurchase.isPaid = false;
+  productData.creditPurchase.paymentDate = null;
+}
+  
+  // Agregar el producto a la lista de productos del proveedor
+  await Cliente.findByIdAndUpdate(productData.provider, {
+    $addToSet: { products: newProduct._id }
+  });
+    }
+
+      // Validar formato del ID de categoría
+      if (!mongoose.Types.ObjectId.isValid(productData.category)) {
+          return res.status(400).json({
+              status: 'error',
+              message: 'ID de categoría inválido'
+          });
+      }
+
+      // Verificar si la categoría existe
+      const categoryExists = await Category.findById(productData.category);
+      if (!categoryExists) {
+          return res.status(404).json({
+              status: 'error',
+              message: 'La categoría especificada no existe'
+          });
+      }
+
+      // Validar precios
+      if (Number(productData.purchasePrice) < 0 || Number(productData.salePrice) < 0) {
+          return res.status(400).json({
+              status: 'error',
+              message: 'Los precios no pueden ser negativos'
+          });
+      }
+
+      // Validaciones específicas para productos por peso
+      if (productData.unitType === UNIT_TYPES.WEIGHT) {
+          if (!productData.weightUnit) {
+              return res.status(400).json({
+                  status: 'error',
+                  message: 'La unidad de peso es requerida para productos por peso'
+              });
+          }
+
+          // Validar campos numéricos específicos para productos por peso
+          const weightFields = ['minWeight'];
+          if (productData.packageWeight) {
+              weightFields.push('packageWeight');
+          }
+          
+          for (const field of weightFields) {
+              if (productData[field] && (isNaN(Number(productData[field])) || Number(productData[field]) <= 0)) {
+                  return res.status(400).json({
+                    status: 'error',
+                        message: `El campo ${field} debe ser un número positivo`,
+                        field
+                    });
+                }
+            }
+            
+            // Si se proporciona packageWeight, calcular/validar pricePerUnit
+            if (productData.packageWeight) {
+                const packageWeight = Number(productData.packageWeight);
+                const salePrice = Number(productData.salePrice);
+                
+                if (packageWeight > 0 && salePrice > 0) {
+                    // Calcular el precio por unidad de peso
+                    const pricePerUnit = salePrice / packageWeight;
+                    // Guardar el precio por unidad en los datos del producto
+                    productData.pricePerUnit = parseFloat(pricePerUnit.toFixed(2));
+                }
+            }
         }
 
-        if (!['admin', 'encargado'].includes(req.user.role)) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'No tienes permisos para crear productos'
-            });
-        }
-
-        const {
-            name,
-            barcode,
-            qrCode,
-            unitType,
-            quantity,
-            minStock,
-            purchasePrice,
-            salePrice,
-            category,
-            description,
-            image
-        } = req.body;
-
-        // Validar campos requeridos
-        const requiredFields = ['name', 'barcode', 'minStock', 'purchasePrice', 'salePrice', 'category'];
-        const missingFields = requiredFields.filter(field => !req.body[field]);
-
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Faltan campos requeridos',
-                missingFields
-            });
-        }
-
-        // Validar formato del ID de categoría
-        if (!mongoose.Types.ObjectId.isValid(category)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'ID de categoría inválido'
-            });
-        }
-
-        // Verificar si la categoría existe
-        const categoryExists = await Category.findById(category);
-        if (!categoryExists) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'La categoría especificada no existe'
-            });
-        }
-
-        // Validar precios
-        if (Number(purchasePrice) < 0 || Number(salePrice) < 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Los precios no pueden ser negativos'
-            });
-        }
-
-        if (Number(salePrice) < Number(purchasePrice)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'El precio de venta no puede ser menor al precio de compra'
-            });
-        }
-
-        // Preparar datos del producto
-        const productData = {
-            name,
-            barcode,
-            qrCode,
-            minStock: Number(minStock),
-            purchasePrice: Number(purchasePrice),
-            salePrice: Number(salePrice),
-            category,
-            description,
-            createdBy: req.user._id,
-            quantity: Number(quantity) || 0
-        };
-
-        // Agregar unitType solo si se proporciona
-        if (unitType && Object.values(UNIT_TYPES).includes(unitType)) {
-            productData.unitType = unitType;
-        }
-
-        // Agregar imagen si se proporciona
-        if (image && image.url && image.publicId) {
-            productData.image = {
-                url: image.url,
-                publicId: image.publicId
-            };
-        }
+        // Asegurarse de que los campos numéricos sean números
+        ['purchasePrice', 'salePrice', 'quantity', 'minStock', 'minWeight', 'packageWeight', 'pricePerUnit'].forEach(field => {
+            if (productData[field] !== undefined) {
+                productData[field] = Number(productData[field]);
+            }
+        });
+        
+        // Agregar el usuario que crea el producto
+        productData.createdBy = req.user._id;
 
         // Crear el producto
         const product = await Product.create(productData);
@@ -140,6 +197,7 @@ export const createProduct = async (req, res) => {
         });
     }
 };
+                      
   export const getInventoryAlerts = async (req, res) => {
     try {
       const alerts = await Product.find({
@@ -211,8 +269,8 @@ export const deleteProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
   try {
     const {
-      page = 1,
-      limit = 10,
+      page,
+      limit,
       category,
       search,
       sortBy = 'createdAt',
@@ -231,21 +289,37 @@ export const getProducts = async (req, res) => {
       query.$text = { $search: search };
     }
 
-    const products = await Product.find(query)
-      .populate('category', 'name')
-      .populate('createdBy', 'username')
-      .populate('updatedBy', 'username')
-      .sort({ [sortBy]: order })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    // Si no se especifica página o límite, traer todos los productos
+    if (!page || !limit) {
+      const products = await Product.find(query)
+        .populate('category', 'name')
+        .populate('createdBy', 'username')
+        .populate('updatedBy', 'username')
+        .sort({ [sortBy]: order });
 
-    const total = await Product.countDocuments(query);
+      return res.json({
+        products,
+        totalPages: 1,
+        currentPage: 1
+      });
+    } else {
+      // Si se especifica paginación, aplicarla
+      const products = await Product.find(query)
+        .populate('category', 'name')
+        .populate('createdBy', 'username')
+        .populate('updatedBy', 'username')
+        .sort({ [sortBy]: order })
+        .limit(Number(limit))
+        .skip((Number(page) - 1) * Number(limit));
 
-    res.json({
-      products,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page
-    });
+      const total = await Product.countDocuments(query);
+
+      return res.json({
+        products,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Number(page)
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -297,5 +371,53 @@ export const getProductById = async (req, res) => {
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const getProductByCode = async (req, res) => {
+  try {
+      const { code } = req.params;
+      
+      const product = await Product.findOne({
+          $or: [
+              { barcode: code },
+              { qrCode: code }
+          ]
+      });
+
+      if (!product) {
+          return res.status(404).json({
+              status: 'error',
+              message: 'Producto no encontrado'
+          });
+      }
+
+      res.json({
+          status: 'success',
+          data: product
+      });
+  } catch (error) {
+      res.status(500).json({
+          status: 'error',
+          message: 'Error al buscar el producto',
+          error: error.message
+      });
+  }
+};
+
+export const getProductByBarcode = async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    const product = await Product.findOne({ barcode });
+    
+    if (!product) {
+      console.log('Barcode not found:', barcode); // Para debugging
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    
+    res.json(product);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: error.message });
   }
 };
