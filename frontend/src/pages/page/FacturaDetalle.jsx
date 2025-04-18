@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getInvoiceById, processFiscalInvoice, cancelInvoice, addPayment } from '../../services/invoiceService';
 import { motion } from 'framer-motion';
 import { Button } from '@mui/material';
-import { FaCreditCard, FaReceipt } from 'react-icons/fa';
+import { FaCreditCard, FaReceipt, FaPrint, FaArrowLeft } from 'react-icons/fa';
 
 const FacturaDetalle = () => {
   const { id } = useParams();
@@ -29,10 +29,11 @@ const FacturaDetalle = () => {
       try {
         setLoading(true);
         const response = await getInvoiceById(id);
-        setInvoice(response.data);
+        setInvoice(response);
         setError(null);
       } catch (err) {
         setError(err.message || 'Error al cargar la factura');
+        console.error('Error al cargar la factura:', err);
       } finally {
         setLoading(false);
       }
@@ -96,6 +97,56 @@ const FacturaDetalle = () => {
     navigate(`/dashboard/crear-nota-credito/${id}`);
   };
 
+  // Función para obtener el estado de pago
+  const getPaymentStatus = (invoice) => {
+    if (invoice.paymentMethod === 'credit') {
+      return invoice.creditStatus || 'pending';
+    }
+    // Para pagos que no son a crédito, asumimos que están pagados
+    return 'paid';
+  };
+
+  // Función para traducir los estados
+  const getStatusTranslation = (status) => {
+    const statusTranslations = {
+      'completed': 'Completada',
+      'cancelled': 'Cancelada',
+      'pending': 'Pendiente',
+      'draft': 'Borrador',
+      'refunded': 'Reembolsada',
+      'partially_refunded': 'Reembolso Parcial'
+    };
+    return statusTranslations[status] || status;
+  };
+
+  // Función para traducir los estados de pago
+  const getPaymentStatusTranslation = (status) => {
+    const paymentStatusTranslations = {
+      'paid': 'Pagada',
+      'partial': 'Pago Parcial',
+      'pending': 'Pendiente',
+      'overdue': 'Vencida'
+    };
+    return paymentStatusTranslations[status] || status;
+  };
+
+  // Función para traducir los métodos de pago
+  const getPaymentMethodTranslation = (method) => {
+    const methodTranslations = {
+      'cash': 'Efectivo',
+      'credit_card': 'Tarjeta',
+      'bank_transfer': 'Transferencia',
+      'credit': 'Crédito',
+      'check': 'Cheque',
+      'other': 'Otro'
+    };
+    return methodTranslations[method] || method;
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading) return <div className="p-4 text-center">Cargando...</div>;
   if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
   if (!invoice) return <div className="p-4 text-center">No se encontró la factura</div>;
@@ -107,7 +158,8 @@ const FacturaDetalle = () => {
       exit={{ opacity: 0 }}
       className="container mx-auto p-4"
     >
-      <div className="flex justify-between items-center mb-6">
+      {/* Barra de acciones - solo visible en pantalla */}
+      <div className="flex justify-between items-center mb-6 print:hidden">
         <h1 className="text-2xl font-bold">Factura #{invoice.receiptNumber}</h1>
         <div className="flex space-x-2">
           {invoice.status !== 'cancelled' && (
@@ -134,53 +186,70 @@ const FacturaDetalle = () => {
               >
                 Cancelar
               </button>
-              <button
+              <Button
+                variant="outlined"
+                startIcon={<FaArrowLeft />}
                 onClick={() => navigate('/dashboard/facturas')}
-                className="bg-gray-300 px-4 py-2 rounded"
               >
                 Volver
-              </button>
+              </Button>
             </>
           )}
-          <button
-            onClick={() => window.print()}
-            className="bg-gray-500 text-white px-4 py-2 rounded"
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<FaPrint />}
+            onClick={handlePrint}
           >
             Imprimir
-          </button>
-          <Button
-            color="primary"
-            className="flex items-center"
-            onClick={() => navigate(`/dashboard/crear-nota-credito/${id}`)}
-          >
-            <FaCreditCard className="mr-2" /> Crear Nota Crédito
           </Button>
           {invoice.status === 'completed' && (
             <Button
+              variant="contained"
               color="warning"
-              className="flex items-center"
+              startIcon={<FaCreditCard />}
+              onClick={() => navigate(`/dashboard/crear-nota-credito/${id}`)}
+            >
+              Nota Crédito
+            </Button>
+          )}
+          {invoice.status === 'completed' && (
+            <Button
+              variant="contained"
+              color="info"
+              startIcon={<FaReceipt />}
               onClick={() => navigate(`/dashboard/crear-retencion/${id}`)}
             >
-              <FaReceipt className="mr-2" /> Crear Retención
+              Retención
             </Button>
           )}
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg p-6 mb-6">
-        <div className="grid grid-cols-2 gap-4 mb-6">
+      {/* Contenido de la factura (visible tanto en pantalla como en impresión) */}
+      <div className="bg-white shadow-md rounded-lg p-6 mb-6 print:shadow-none print:p-0">
+        {/* Cabecera de factura para impresión */}
+        <div className="hidden print:block text-center mb-4">
+          <h1 className="text-xl font-bold">Factura #{invoice.receiptNumber}</h1>
+          <p className="text-sm">{new Date(invoice.createdAt || invoice.dateTime).toLocaleDateString()}</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:text-sm">
           <div>
-            <h2 className="text-lg font-semibold mb-2">Información General</h2>
-            <p><strong>Fecha:</strong> {new Date(invoice.dateTime).toLocaleDateString()}</p>
-            <p><strong>Estado:</strong> {invoice.status}</p>
-            <p><strong>Estado de Pago:</strong> {invoice.paymentStatus}</p>
-            <p><strong>Método de Pago:</strong> {invoice.paymentMethod}</p>
-            {invoice.isFiscal && (
-              <p><strong>Estado Fiscal:</strong> {invoice.fiscalStatus}</p>
+            <h2 className="text-lg font-semibold mb-2 print:text-base">Información General</h2>
+            <p><strong>Fecha:</strong> {new Date(invoice.createdAt || invoice.dateTime).toLocaleDateString()}</p>
+            <p><strong>Estado:</strong> {getStatusTranslation(invoice.status)}</p>
+            <p><strong>Estado de Pago:</strong> {getPaymentStatusTranslation(getPaymentStatus(invoice))}</p>
+            <p><strong>Método de Pago:</strong> {getPaymentMethodTranslation(invoice.paymentMethod)}</p>
+            {invoice.paymentDetails && invoice.paymentDetails.cardLastFour && (
+              <p><strong>Tarjeta:</strong> **** **** **** {invoice.paymentDetails.cardLastFour}</p>
+            )}
+            {invoice.paymentMethod === 'credit' && invoice.isCredit && invoice.clientInfo && (
+              <p><strong>Cliente de Crédito:</strong> {invoice.clientInfo.name}</p>
             )}
           </div>
           <div>
-            <h2 className="text-lg font-semibold mb-2">Cliente</h2>
+            <h2 className="text-lg font-semibold mb-2 print:text-base">Cliente</h2>
             <p><strong>Nombre:</strong> {invoice.customer.name}</p>
             {invoice.customer.email && <p><strong>Email:</strong> {invoice.customer.email}</p>}
             {invoice.customer.phone && <p><strong>Teléfono:</strong> {invoice.customer.phone}</p>}
@@ -189,58 +258,72 @@ const FacturaDetalle = () => {
           </div>
         </div>
 
-        <h2 className="text-lg font-semibold mb-2">Productos</h2>
+        <h2 className="text-lg font-semibold mb-2 print:text-base">Productos</h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
+          <table className="min-w-full bg-white print:text-sm">
             <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 text-left">Producto</th>
-                <th className="py-2 px-4 text-right">Cantidad</th>
-                <th className="py-2 px-4 text-right">Precio</th>
-                <th className="py-2 px-4 text-right">Descuento</th>
-                <th className="py-2 px-4 text-right">Subtotal</th>
+              <tr className="bg-gray-100 print:bg-white">
+                <th className="py-2 px-4 text-left print:py-1 print:px-2">Producto</th>
+                <th className="py-2 px-4 text-right print:py-1 print:px-2">Cantidad</th>
+                <th className="py-2 px-4 text-right print:py-1 print:px-2">Precio</th>
+                <th className="py-2 px-4 text-right print:py-1 print:px-2">Subtotal</th>
               </tr>
             </thead>
             <tbody>
               {invoice.items.map((item, index) => (
                 <tr key={index} className="border-b">
-                  <td className="py-2 px-4">{item.product.name}</td>
-                  <td className="py-2 px-4 text-right">{item.quantity}</td>
-                  <td className="py-2 px-4 text-right">${item.price.toFixed(2)}</td>
-                  <td className="py-2 px-4 text-right">${(item.discount || 0).toFixed(2)}</td>
-                  <td className="py-2 px-4 text-right">${item.subtotal.toFixed(2)}</td>
+                  <td className="py-2 px-4 print:py-1 print:px-2">
+                    {item.product.name || 'Producto'}
+                    {item.weightInfo && (
+                      <span className="text-sm text-gray-500 block print:text-xs">
+                        {item.weightInfo.value} {item.weightInfo.unit} a ${item.weightInfo.pricePerUnit}/{item.weightInfo.unit}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 px-4 text-right print:py-1 print:px-2">{item.quantity}</td>
+                  <td className="py-2 px-4 text-right print:py-1 print:px-2">${item.price.toFixed(2)}</td>
+                  <td className="py-2 px-4 text-right print:py-1 print:px-2">${item.subtotal.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t">
+                <td colSpan="3" className="py-2 px-4 text-right font-semibold print:py-1 print:px-2">Subtotal:</td>
+                <td className="py-2 px-4 text-right print:py-1 print:px-2">${invoice.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td colSpan="3" className="py-2 px-4 text-right font-semibold print:py-1 print:px-2">Impuestos ({(invoice.taxRate * 100).toFixed(0)}%):</td>
+                <td className="py-2 px-4 text-right print:py-1 print:px-2">${invoice.taxAmount.toFixed(2)}</td>
+              </tr>
+              <tr className="bg-gray-50 font-bold print:bg-white">
+                <td colSpan="3" className="py-2 px-4 text-right print:py-1 print:px-2">Total:</td>
+                <td className="py-2 px-4 text-right print:py-1 print:px-2">${invoice.total.toFixed(2)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 
-        <div className="mt-4 text-right">
-          <p><strong>Subtotal:</strong> ${invoice.subtotal.toFixed(2)}</p>
-          {invoice.discountAmount > 0 && (
-            <p><strong>Descuento Total:</strong> ${invoice.discountAmount.toFixed(2)}</p>
-          )}
-          {invoice.taxes && invoice.taxes.map((tax, index) => (
-            <p key={index}>
-              <strong>{tax.name} ({tax.rate}%):</strong> ${tax.amount.toFixed(2)}
-            </p>
-          ))}
-          <p className="text-xl font-bold mt-2">
-            <strong>Total:</strong> ${invoice.total.toFixed(2)}
-          </p>
-          {invoice.paymentStatus !== 'paid' && (
-            <p className="text-red-500">
-              <strong>Pendiente:</strong> ${(invoice.total - (invoice.paidAmount || 0)).toFixed(2)}
-            </p>
-          )}
-        </div>
-
-        {invoice.notes && (
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold">Notas</h2>
-            <p className="whitespace-pre-line">{invoice.notes}</p>
+        {/* Información adicional del Cajero - opcional en impresión */}
+        {invoice.cashier && (
+          <div className="mt-6 print:mt-3 print:text-sm">
+            <h2 className="text-lg font-semibold mb-2 print:text-base">Información del Cajero</h2>
+            <p><strong>Nombre:</strong> {invoice.cashier.name || 'No disponible'}</p>
           </div>
         )}
+
+        {/* Notas o comentarios - opcional en impresión */}
+        {invoice.notes && (
+          <div className="mt-6 print:mt-3 print:text-sm">
+            <h2 className="text-lg font-semibold mb-2 print:text-base">Notas</h2>
+            <p className="p-2 bg-gray-50 rounded print:bg-white print:p-0">{invoice.notes}</p>
+          </div>
+        )}
+        
+        {/* Pie de factura solo para impresión */}
+        <div className="hidden print:block text-center mt-6 text-xs">
+          <p>Gracias por su compra</p>
+          <p>** Este documento es un comprobante válido de pago **</p>
+        </div>
       </div>
 
       {/* Modal para registrar pago */}
@@ -323,6 +406,81 @@ const FacturaDetalle = () => {
           </div>
         </div>
       )}
+
+      {/* Estilos de impresión */}
+      <style jsx>{`
+        @media print {
+          button, .no-print {
+            display: none !important;
+          }
+          body {
+            font-size: 12pt;
+            margin: 0;
+            padding: 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          /* Ocultar elementos del navegador */
+          @page {
+            margin: 0.5cm;
+            size: auto;
+          }
+          /* Elimina URLs, encabezados y pies de página del navegador */
+          @page {
+            margin: 1cm;
+          }
+          @page :first {
+            margin-top: 1cm;
+          }
+          @page :left {
+            margin-left: 1cm;
+          }
+          @page :right {
+            margin-right: 1cm;
+          }
+          html {
+            height: 100%;
+          }
+        }
+      `}</style>
+
+      {/* Script para limpiar la impresión */}
+      <script dangerouslySetInnerHTML={{
+        __html: `
+          function beforePrint() {
+            // Crear un estilo temporal para la impresión
+            const style = document.createElement('style');
+            style.id = 'print-style';
+            style.innerHTML = \`
+              @media print {
+                /* Ocultar URLs y otros elementos del navegador */
+                @page { size: auto; margin: 0mm; }
+                html, body { height: 99%; }
+                /* Ocultar la URL que se muestra en el pie de página */
+                body::after { display: none !important; content: none !important; }
+              }
+            \`;
+            document.head.appendChild(style);
+          }
+
+          function afterPrint() {
+            // Eliminar el estilo temporal
+            const style = document.getElementById('print-style');
+            if (style) style.remove();
+          }
+
+          // Agregar escuchadores de eventos de impresión
+          window.addEventListener('beforeprint', beforePrint);
+          window.addEventListener('afterprint', afterPrint);
+        `
+      }} />
     </motion.div>
   );
 };

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
 
-const API_URL = '/api/facturas';
+const API_URL = '/api/newinvoices';
 
 // Obtener todas las facturas con filtros
 export const getInvoices = async (filters = {}) => {
