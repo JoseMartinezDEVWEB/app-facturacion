@@ -375,9 +375,29 @@ const CarritoCompra = ({
     
     const tax = applyTax ? subtotal * 0.18 : 0; // ITBIS 18%
     const total = subtotal + tax;
-    const change = cashReceived ? parseFloat(cashReceived) - total : 0;
+    
+    // Convertir explícitamente a número para evitar problemas
+    const cashAmount = parseFloat(cashReceived) || 0;
+    // Calcular el cambio correctamente (nunca menor que 0)
+    const change = Math.max(0, cashAmount - total);
+    
+    // Debug para verificar los valores
+    console.log('DEBUG CarritoCompra - Calculando totales:', { 
+      cashReceived, 
+      cashAmount, 
+      total, 
+      change,
+      subtotal,
+      tax
+    });
 
-    setTotals({ subtotal, tax, total, change });
+    setTotals({ 
+      subtotal, 
+      tax, 
+      total, 
+      change, 
+      cashReceived: cashAmount 
+    });
   }, [cart, applyTax, cashReceived]);
 
   const handleDeleteItem = (productId) => {
@@ -402,9 +422,12 @@ const CarritoCompra = ({
       setSearchTerm('');
     }
     
-    // Si está marcado, cambiar método de pago a "credit"
+    // Si está marcado, cambiar método de pago a "credit" y limpiar efectivo
     if (e.target.checked) {
       setPaymentMethod('credit');
+      // IMPORTANTE: Limpiar valores de efectivo al cambiar a crédito
+      setCashReceived('');
+      console.log('Cambiando a crédito - limpiando valores de efectivo');
     } else {
       // Volver a efectivo por defecto
       setPaymentMethod('cash');
@@ -420,6 +443,9 @@ const CarritoCompra = ({
       clientId: client._id,
       clientName: client.name
     }));
+    
+    // Asegurar que no hay valores de efectivo en compras fiadas
+    setCashReceived('');
   };
 
   const handleProcessPayment = () => {
@@ -632,14 +658,47 @@ const CarritoCompra = ({
               </label>
               <input
                 type="number"
+                min="0"
+                step="any"
                 className="w-full p-2 border rounded"
                 value={cashReceived}
-                onChange={(e) => setCashReceived(e.target.value)}
+                onChange={(e) => {
+                  // Asegurar que el valor sea un número válido
+                  const value = e.target.value;
+                  if (value === '' || !isNaN(parseFloat(value))) {
+                    setCashReceived(value);
+                    console.log('Efectivo actualizado:', value);
+                  }
+                }}
+                onBlur={(e) => {
+                  // Al perder el foco, formatear correctamente el valor
+                  const numericValue = parseFloat(e.target.value) || 0;
+                  // Si es un número válido y mayor que cero, guardarlo
+                  if (numericValue > 0) {
+                    setCashReceived(numericValue.toString());
+                    console.log('Efectivo formateado:', numericValue);
+                  } else if (e.target.value === '') {
+                    // Si está vacío, dejarlo vacío
+                    setCashReceived('');
+                  } else {
+                    // Si es cero o negativo, resetear
+                    setCashReceived('');
+                  }
+                }}
+                placeholder="Ingrese el monto recibido"
               />
-              {parseFloat(cashReceived) >= totals.total && (
-                <p className="mt-2">
-                  Cambio a devolver: ${totals.change.toFixed(2)}
-                </p>
+              
+              {parseFloat(cashReceived) > 0 && (
+                <div className="mt-2">
+                  <p className={`${parseFloat(cashReceived) >= totals.total ? 'text-green-600' : 'text-red-600'} font-medium`}>
+                    Cambio a devolver: ${totals.change.toFixed(2)}
+                  </p>
+                  {parseFloat(cashReceived) < totals.total && (
+                    <p className="text-xs text-red-500 mt-1">
+                      El monto recibido es menor que el total a pagar
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

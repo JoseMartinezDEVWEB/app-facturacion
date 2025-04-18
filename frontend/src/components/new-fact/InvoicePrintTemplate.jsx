@@ -1,7 +1,8 @@
 import { forwardRef } from 'react';
 import PropTypes from 'prop-types';
+import CashPaymentDisplay from './CashPaymentDisplay';
 
-const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod, businessInfo, currentUser, invoiceNumber, isCredit, clientName }, ref) => {
+const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod, businessInfo, currentUser, invoiceNumber, isCredit, clientName, cashReceivedValue }, ref) => {
     const formatDate = (date) => {
         const options = { 
             year: 'numeric', 
@@ -22,6 +23,22 @@ const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod
 
     // Determinar la moneda a mostrar
     const currencySymbol = businessInfo?.currency || 'RD$';
+    
+    // Obtener el monto en efectivo de cashReceivedValue (nueva prop) o del objeto totals
+    const effectiveCashReceived = cashReceivedValue !== undefined ? cashReceivedValue : (totals.cashReceived || 0);
+    
+    // IMPORTANTE: Verificar el método de pago real - nunca mostrar efectivo en compras fiadas
+    // Si es una compra fiada, ignorar cualquier valor de efectivo
+    const actualPaymentMethod = isCredit ? 'credit' : paymentMethod;
+    
+    // Valor para depuración
+    console.log('InvoicePrintTemplate - Render con valores:', {
+        paymentMethod: actualPaymentMethod,
+        isCredit,
+        total: totals.total,
+        cashReceived: effectiveCashReceived,
+        fromCashReceivedProp: cashReceivedValue !== undefined
+    });
 
     return (
         <div ref={ref} className="p-6 max-w-md mx-auto">
@@ -124,36 +141,13 @@ const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod
                     </div>
                 )}
                 
-                {/* Efectivo recibido y devuelta - versión mejorada */}
-                {paymentMethod === 'cash' && !isCredit && (
-                    <>
-                        <div className="flex justify-between">
-                            <span>Efectivo recibido:</span>
-                            <span>
-                                {typeof totals.cashReceived === 'number' || totals.cashReceived
-                                    ? `${currencySymbol}${parseFloat(totals.cashReceived || 0).toFixed(2)}`
-                                    : (totals.paymentDetails && totals.paymentDetails.received)
-                                        ? `${currencySymbol}${parseFloat(totals.paymentDetails.received || 0).toFixed(2)}`
-                                        : `${currencySymbol}0.00`
-                                }
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Devuelta:</span>
-                            <span style={{ 
-                                color: (totals.change >= 0 || 
-                                      (totals.paymentDetails && totals.paymentDetails.change >= 0)) 
-                                    ? 'inherit' : 'red' 
-                            }}>
-                                {typeof totals.change === 'number'
-                                    ? `${currencySymbol}${parseFloat(totals.change || 0).toFixed(2)}`
-                                    : (totals.paymentDetails && totals.paymentDetails.change)
-                                        ? `${currencySymbol}${parseFloat(totals.paymentDetails.change || 0).toFixed(2)}`
-                                        : `${currencySymbol}0.00`
-                                }
-                            </span>
-                        </div>
-                    </>
+                {/* IMPORTANTE: Usar el nuevo componente SOLO para pagos en efectivo y NUNCA para crédito */}
+                {!isCredit && actualPaymentMethod === 'cash' && (
+                    <CashPaymentDisplay 
+                        total={totals.total} 
+                        cashReceived={effectiveCashReceived}
+                        currencySymbol={currencySymbol}
+                    />
                 )}
             </div>
 
@@ -182,7 +176,9 @@ InvoicePrintTemplate.propTypes = {
     currentUser: PropTypes.object,
     invoiceNumber: PropTypes.string,
     isCredit: PropTypes.bool,
-    clientName: PropTypes.string
+    clientName: PropTypes.string,
+    // Nueva prop para pasar directamente el valor de efectivo recibido
+    cashReceivedValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
 };
 
 InvoicePrintTemplate.displayName = 'InvoicePrintTemplate';

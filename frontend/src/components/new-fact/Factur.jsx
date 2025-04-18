@@ -12,8 +12,8 @@ import WeightProductInput from './WeightProductInput';
 import ProductWeightDisplay from './ProductWeightDisplay';
 import { invoiceApi } from '../../config/apis';
 import BuscarProduct from './BuscarProduct';
-import InvoiceConfigurationModal from './InvoicePreviewModal';
 import InvoicePreviewModal from './InvoicePreviewModal';
+import BusinessInfoSettings from './BusinessInfoSettings';
 
 const API_URL = 'http://localhost:4000/api';
 
@@ -321,7 +321,8 @@ const POSSystem = () => {
       currency: "RD$",
       taxRate: 18,
       includeTax: true,
-      footer: "¡Gracias por su compra!"
+      footer: "¡Gracias por su compra!",
+      additionalComment: ""
     };
   });
 
@@ -363,8 +364,12 @@ const POSSystem = () => {
   const { fetchProductByBarcode, fetchProductByName, productError } = useProducts();
 
    // Manejadores para los nuevos modales
-  const handleOpenSettings = () => {
-    setSettingsModalOpen(true);
+  const handleOpenSettings = (type = 'business') => {
+    if (type === 'business') {
+      setSettingsModalOpen(true);
+    } else if (type === 'print') {
+      setConfigModalOpen(true);
+    }
   };
   
   const handleSaveSettings = (newSettings) => {
@@ -580,6 +585,7 @@ const POSSystem = () => {
     return () => window.removeEventListener('keypress', handleKeyPress);
   }, [currentProduct, quantity, manualQuantity, addToCart]);
 
+  // Calcular totales del carrito
   const calculateTotals = useCallback(() => {
     const subtotal = cart.reduce((sum, item) => {
       if (item.weightInfo) {
@@ -594,9 +600,29 @@ const POSSystem = () => {
     
     const tax = applyTax ? subtotal * 0.18 : 0; // ITBIS 18%
     const total = subtotal + tax;
-    const change = cashReceived ? parseFloat(cashReceived) - total : 0;
+    
+    // Asegurar que cashReceived sea tratado como número
+    const cashAmount = parseFloat(cashReceived) || 0;
+    // Calcular el cambio correctamente
+    const change = Math.max(0, cashAmount - total);
+    
+    // Debug para verificar los valores
+    console.log('DEBUG Factur - calculateTotals:', { 
+      subtotal, 
+      tax, 
+      total, 
+      cashReceived, 
+      cashAmount, 
+      change 
+    });
 
-    return { subtotal, tax, total, change, cashReceived };
+    return { 
+      subtotal, 
+      tax, 
+      total, 
+      change, 
+      cashReceived: cashAmount 
+    };
   }, [cart, applyTax, cashReceived]);
 
   const updateQuantity = useCallback((productId, newQuantity) => {
@@ -629,6 +655,10 @@ const POSSystem = () => {
     try {
       console.log('Preparando datos para impresión:', invoiceData);
       
+      // Capturar el valor actual del efectivo
+      const actualCashReceived = parseFloat(cashReceived) || 0;
+      console.log('VALOR ACTUAL EFECTIVO:', actualCashReceived);
+      
       // Determinar si es una compra fiada
       const isCredit = invoiceData.isCredit || 
                       invoiceData.paymentMethod === 'credit' || 
@@ -648,14 +678,44 @@ const POSSystem = () => {
       
       // Importante: Asegurar que tengamos la información de pago correcta
       let paymentDetailsToUse = invoiceData.paymentDetails || {};
+      let totalsToUse = { ...calculateTotals() };
       
-      // Si estamos creando una nueva factura, usar los valores actuales
-      if (paymentMethod === 'cash' && !invoiceData.paymentDetails) {
-        const { change } = calculateTotals();
+      // CORRECCIÓN CRÍTICA: Si es compra fiada, no debe tener valores de efectivo
+      if (isCredit) {
+        // Asegurar que no hay valores de efectivo en compras fiadas
         paymentDetailsToUse = {
-          received: parseFloat(cashReceived) || 0,
-          change: change || 0
+          clientId: paymentDetailsToUse.clientId || paymentDetails.clientId,
+          clientName: paymentDetailsToUse.clientName || paymentDetails.clientName
+          // No incluir received o change en compras a crédito
         };
+        
+        // Limpiar valores de efectivo en los totales
+        totalsToUse.cashReceived = 0;
+        totalsToUse.change = 0;
+        
+        console.log('FIADO - Sin valores de efectivo', totalsToUse);
+      }
+      // Si estamos creando una nueva factura de efectivo, usar los valores actuales
+      else if (paymentMethod === 'cash' && !invoiceData.paymentDetails) {
+        // Usar el valor actual del efectivo capturado
+        paymentDetailsToUse = {
+          received: actualCashReceived,
+          change: totalsToUse.change
+        };
+        
+        // Asegurar que los totales incluyen los montos correctos
+        totalsToUse.cashReceived = actualCashReceived;
+        totalsToUse.change = Math.max(0, actualCashReceived - totalsToUse.total);
+        
+        console.log('DATOS EFECTIVO CALCULADOS:', {
+          efectivoRecibido: actualCashReceived,
+          cambio: totalsToUse.change,
+          total: totalsToUse.total
+        });
+      } else if (invoiceData.paymentDetails) {
+        // Si ya tenemos detalles de pago en la factura, usarlos
+        totalsToUse.cashReceived = invoiceData.paymentDetails.received;
+        totalsToUse.change = invoiceData.paymentDetails.change;
       }
       
       // Configurar los datos completos para el modal de impresión
@@ -672,11 +732,24 @@ const POSSystem = () => {
           ? JSON.parse(localStorage.getItem('currentUser')).name 
           : 'No identificado',
         // Asegurar que la información de pago esté incluida
-        paymentDetails: paymentDetailsToUse
+        paymentDetails: paymentDetailsToUse,
+        // Incluir los totales correctos
+        totals: totalsToUse,
+        // Incluir directamente el monto de efectivo para evitar dependencias
+        actualCashReceived: isCredit ? 0 : actualCashReceived
       };
       
       // Guardar los datos de la factura actual para el modal
       setCurrentInvoice(printData);
+      
+      // Para forzar un valor en el estado local y asegurar que se use en el componente de impresión
+      // Solo actualizar el efectivo si no es una compra fiada
+      if (!isCredit) {
+        setCashReceived(actualCashReceived.toString());
+      } else {
+        // Para compras fiadas, limpiar cualquier valor de efectivo
+        setCashReceived('');
+      }
       
       // Registrar por consola los detalles relevantes
       console.log('Datos de impresión preparados:', {
@@ -684,7 +757,9 @@ const POSSystem = () => {
         isCredit,
         clientName,
         paymentMethod: printData.paymentMethod || paymentMethod,
-        paymentDetails: printData.paymentDetails
+        paymentDetails: printData.paymentDetails,
+        totals: totalsToUse,
+        actualCashReceived: isCredit ? 0 : actualCashReceived
       });
       
       // Comprobar configuración de impresión automática
@@ -708,7 +783,7 @@ const POSSystem = () => {
 
   // Función para procesar el pago
   const processPayment = async () => {
-    const { subtotal, tax, total } = calculateTotals();
+    const { subtotal, tax, total, change, cashReceived: cashAmount } = calculateTotals();
 
     const isCredit = paymentMethod === 'credit';
     
@@ -717,7 +792,7 @@ const POSSystem = () => {
       return;
     }
     
-    if (paymentMethod === 'cash' && parseFloat(cashReceived) < total) {
+    if (paymentMethod === 'cash' && cashAmount < total) {
       setError('El monto recibido es insuficiente');
       return;
     }
@@ -750,9 +825,9 @@ const POSSystem = () => {
           address: customer.address || ''
         },
         // Campos para compra fiada
-        isCredit: paymentMethod === 'credit',
-        clienteId: paymentMethod === 'credit' ? paymentDetails.clientId : null,
-        clientInfo: paymentMethod === 'credit' ? {
+        isCredit: isCredit,
+        clienteId: isCredit ? paymentDetails.clientId : null,
+        clientInfo: isCredit ? {
           id: paymentDetails.clientId,
           name: paymentDetails.clientName
         } : null,
@@ -779,10 +854,21 @@ const POSSystem = () => {
           return itemData;
         }),
         paymentMethod: paymentMethod || 'credit', // Si no hay método, es porque es crédito
-        paymentDetails: paymentMethod === 'cash' ? {
-          received: parseFloat(cashReceived) || 0,
-          change: (parseFloat(cashReceived) - total) || 0
-        } : paymentDetails,
+        
+        // IMPORTANTE: Configurar correctamente los detalles de pago según el método
+        paymentDetails: isCredit 
+          ? { // Detalles para pago a crédito
+              clientId: paymentDetails.clientId,
+              clientName: paymentDetails.clientName,
+              // No incluir received o change en compras a crédito
+            } 
+          : paymentMethod === 'cash' 
+            ? { // Detalles para pago en efectivo
+                received: cashAmount,
+                change: change
+              } 
+            : paymentDetails, // Otros métodos de pago
+            
         subtotal,
         taxAmount: tax,
         total,
@@ -809,12 +895,16 @@ const POSSystem = () => {
         // Prepare receipt number for printing
         const receiptNumber = response.receiptNumber || `FAC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-????`;
         
-        // Set current invoice for printing
+        // Set current invoice for printing - CORREGIR VALORES PARA COMPRAS FIADAS
         setCurrentInvoice({
           ...response,
           receiptNumber,
           isCredit: invoiceData.isCredit,
-          clientName: invoiceData.isCredit ? paymentDetails.clientName : 'Cliente General'
+          clientName: invoiceData.isCredit ? paymentDetails.clientName : 'Cliente General',
+          // Asegurar que no hay valores de efectivo para compras fiadas
+          paymentDetails: invoiceData.paymentDetails,
+          // Forzar limpiar valores de efectivo en compras fiadas
+          cashReceived: invoiceData.isCredit ? 0 : cashAmount
         });
         
         // Open print modal
@@ -1031,20 +1121,14 @@ const POSSystem = () => {
             ref={printRef}
             cart={cart}
             customer={customer}
-            totals={calculateTotals()}
+            totals={currentInvoice?.totals || calculateTotals()}
             paymentMethod={currentInvoice?.paymentMethod || paymentMethod}
-            businessInfo={{
-              name: "Tu Negocio",
-              address: "Dirección del Negocio",
-              phone: "123-456-7890",
-              rnc: "123456789",
-              slogan: "¡Calidad y servicio garantizado!"
-            }}
+            businessInfo={businessInfo}
             currentUser={localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null}
             invoiceNumber={currentInvoice?.receiptNumber || ''}
             isCredit={currentInvoice?.isCredit || paymentMethod === 'credit'}
             clientName={currentInvoice?.clientName || (paymentMethod === 'credit' ? paymentDetails.clientName : null)}
-            showPrintStatus={printModalOpen}
+            cashReceivedValue={parseFloat(cashReceived) || 0}
           />
         </div>
         
@@ -1057,37 +1141,24 @@ const POSSystem = () => {
         />
       </div>
 
-      {/* Actualizar cómo se pasa businessInfo al componente de impresión */}
-      <div style={{ display: "none" }}>
-      <InvoicePrintTemplate
-          ref={printRef}
-          cart={cart}
-          customer={customer}
-          totals={calculateTotals()}
-          paymentMethod={currentInvoice?.paymentMethod || paymentMethod}
-          businessInfo={businessInfo} // Usar el estado businessInfo
-          currentUser={localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null}
-          invoiceNumber={currentInvoice?.receiptNumber || ''}
-          isCredit={currentInvoice?.isCredit || paymentMethod === 'credit'}
-          clientName={currentInvoice?.clientName || (paymentMethod === 'credit' ? paymentDetails.clientName : null)}
-          showPrintStatus={printModalOpen}
-        />
-      </div>
-      
       {/* Modal actualizado con nuevas propiedades */}
       <PrintConfirmationModal
         isOpen={printModalOpen} 
         onClose={handleCloseModal}
         onConfirm={confirmPrint}
         onViewInvoice={handleViewInvoice}
-        onConfigInvoice={handleOpenSettings}
+        onConfigInvoice={() => handleOpenSettings('business')}
         invoiceNumber={currentInvoice?.receiptNumber || ''}
       />
       
       {/* Modal de configuración */}
-      <InvoiceConfigurationModal
+      <InvoicePreviewModal
         isOpen={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
+        onPrint={() => {}}
+        invoiceData={currentInvoice}
+        businessInfo={businessInfo}
+        printConfig={true}
         onSave={handleOpenSettings}
       />
       
@@ -1097,6 +1168,14 @@ const POSSystem = () => {
         onClose={() => setPreviewModalOpen(false)}
         onPrint={confirmPrint}
         invoiceData={currentInvoice}
+        businessInfo={businessInfo}
+      />
+
+      {/* Modal de configuración del negocio */}
+      <BusinessInfoSettings
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        onSave={handleSaveSettings}
         businessInfo={businessInfo}
       />
     </div>
