@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../config/apis';
 
 // Crear contexto
@@ -11,11 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  // Usar useCallback para evitar recreaciones innecesarias de la función
+  const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('token');
     
     if (token) {
@@ -32,14 +29,18 @@ export const AuthProvider = ({ children }) => {
     }
     
     setLoading(false);
-  };
+  }, []);
+
+  // Ejecutar checkAuth solo una vez al montar el componente
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (credentials) => {
     try {
       console.log('AuthContext: Iniciando sesión con:', credentials);
       setError(null);
       
-      // CORREGIDO: Usar la ruta /login directamente 
       const response = await api.post('/login', credentials);
       
       console.log('Respuesta login:', response);
@@ -74,18 +75,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Memoizar el valor del contexto para evitar renderizados innecesarios
+  const contextValue = {
+    isAuthenticated,
+    loading,
+    login,
+    logout,
+    user,
+    error,
+    checkAuth
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        loading,
-        login,
-        logout,
-        user,
-        error,
-        checkAuth
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

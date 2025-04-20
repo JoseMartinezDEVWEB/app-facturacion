@@ -1,23 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { ERROR_MESSAGES } from '../config/config';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
 
-  // Redirigir si ya está autenticado
+  // Redirigir si ya está autenticado - usando un flag para evitar múltiples verificaciones
+  const [redirectChecked, setRedirectChecked] = useState(false);
+  
   useEffect(() => {
-    if (isAuthenticated) {
+    // Solo verificar una vez cuando isAuthenticated cambie y no estemos cargando
+    if (!authLoading && isAuthenticated && !redirectChecked) {
+      setRedirectChecked(true);
       navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, authLoading, redirectChecked]);
+
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,40 +35,22 @@ const Login = () => {
     setLoading(true);
     setError('');
 
+    // Validaciones básicas
+    if (!formData.email || !formData.password) {
+      setError('Por favor, complete todos los campos');
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log('Login.jsx: Iniciando sesión con:', formData);
-      
-      // Llamar directamente a un endpoint simplificado para depuración
-      // Esto es temporal hasta resolver el problema
-      const response = await login(formData);
-      console.log('Respuesta exitosa:', response);
-      
+      await login(formData);
       // La redirección se maneja en el useEffect
-    } catch (error) {
-      console.error('Error de login:', error);
+    } catch (err) {
+      console.error('Error de login:', err);
       
-      // Manejar errores específicos según el código
-      if (error.code === 'ECONNABORTED') {
-        setError('Tiempo de espera agotado. El servidor está tardando en responder.');
-      } else if (error.code === 'ERR_NETWORK') {
-        setError('No se pudo establecer conexión con el servidor. Verifica que el backend esté en funcionamiento.');
-      } else if (error.response) {
-        if (error.response.status === 404) {
-          setError('La ruta de inicio de sesión no existe en el servidor. Verifica la configuración del backend.');
-        } else if (error.response.status === 500) {
-          setError('Error interno del servidor. Por favor, contacta al administrador.');
-        } else if (error.response.status === 401) {
-          setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-        } else {
-          setError(
-            error.response?.data?.message || 
-            error.message || 
-            ERROR_MESSAGES.DEFAULT
-          );
-        }
-      } else {
-        setError(error.message || ERROR_MESSAGES.DEFAULT);
-      }
+      // Manipular errores comunes
+      const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
+      setError(ERROR_MESSAGES[errorMessage] || errorMessage);
       
       // Incrementar contador de intentos
       setRetryCount(prev => prev + 1);
@@ -68,114 +59,75 @@ const Login = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Limpiar error cuando el usuario empieza a escribir
-    if (error) setError('');
-  };
-
-  // Mostrar información de ayuda después de varios intentos fallidos
-  const showHelp = retryCount > 1;
-
   return (
-    <motion.div 
-      className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-blue-50 to-white"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <motion.div 
-        className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 300 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Iniciar Sesión</h1>
+          <p className="text-gray-600 mt-2">Accede a tu cuenta para continuar</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="email">
               Correo Electrónico
             </label>
             <input
-              type="email"
+              id="email"
               name="email"
+              type="email"
               value={formData.email}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-              disabled={loading}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="usuario@ejemplo.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="password">
               Contraseña
             </label>
             <input
-              type="password"
+              id="password"
               name="password"
+              type="password"
               value={formData.password}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-              disabled={loading}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="••••••••"
             />
           </div>
 
           <AnimatePresence>
             {error && (
-              <motion.div 
-                className="bg-red-50 text-red-700 p-3 rounded-lg text-sm"
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
+                className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg"
               >
                 {error}
-                {showHelp && (
-                  <div className="mt-2 text-xs">
-                    <p>Posibles soluciones:</p>
-                    <ul className="list-disc pl-4 mt-1">
-                      <li>Verifica que el servidor de backend esté ejecutándose en http://localhost:4000</li>
-                      <li>Comprueba que la ruta correcta para login sea /api/login (no /api/users/login)</li>
-                      <li>Error 404: La ruta de API no existe, verifica la configuración del backend</li>
-                      <li>Error 500: Hay un problema interno en el servidor</li>
-                      <li>Si estás en modo desarrollo, revisa la consola del servidor para ver errores detallados</li>
-                    </ul>
-                  </div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <motion.button 
+          <button
             type="submit"
-            className={`w-full bg-blue-600 text-white py-2 rounded-lg transition-colors ${
-              loading ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
-            }`}
-            whileHover={{ scale: loading ? 1 : 1.02 }}
-            whileTap={{ scale: loading ? 1 : 0.98 }}
             disabled={loading}
+            className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            } transition-colors`}
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </motion.button>
-
-          <motion.button
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full text-blue-600 py-2 hover:text-blue-700"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={loading}
-          >
-            Volver al inicio
-          </motion.button>
+          </button>
         </form>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
