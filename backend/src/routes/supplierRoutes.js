@@ -7,7 +7,9 @@ import {
   getSupplierStats, 
   getSupplierById, 
   updateSupplier, 
-  deleteSupplier 
+  deleteSupplier,
+  getSupplierTransactions,
+  createSupplierTransaction
 } from '../controllers/supplierController.js';
 
 const router = express.Router();
@@ -34,5 +36,10 @@ router.route('/:id')
   .get(protect, getSupplierById)
   .put(protect, updateSupplier)
   .delete(protect, deleteSupplier);
+
+// Rutas para transacciones (pagos y deudas)
+router.route('/:id/transactions')
+  .get(protect, getSupplierTransactions)
+  .post(protect, createSupplierTransaction);
 
 export default router; 

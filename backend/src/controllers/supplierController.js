@@ -1,5 +1,6 @@
 import Supplier from '../models/Supplier.js';
 import CreditPurchase from '../models/CreditPurchase.js';
+import SupplierTransaction from '../models/SupplierTransaction.js';
 
 /**
  * Controlador para gestionar proveedores
@@ -106,19 +107,29 @@ export const updateSupplier = async (req, res) => {
 // Eliminar un proveedor
 export const deleteSupplier = async (req, res) => {
   try {
-    // Verificar si hay compras asociadas a este proveedor
-    const hasRelatedPurchases = await CreditPurchase.exists({ supplier: req.params.id });
+    // Verificar si el proveedor tiene compras a crédito asociadas
+    const hasAssociatedPurchases = await CreditPurchase.exists({ supplier: req.params.id });
     
-    if (hasRelatedPurchases) {
+    if (hasAssociatedPurchases) {
       return res.status(400).json({
         success: false,
-        message: 'No se puede eliminar el proveedor porque tiene compras asociadas'
+        message: 'No se puede eliminar el proveedor porque tiene compras a crédito asociadas'
       });
     }
     
-    const supplier = await Supplier.findByIdAndDelete(req.params.id);
+    // Verificar si el proveedor tiene deuda pendiente
+    const supplier = await Supplier.findById(req.params.id);
     
-    if (!supplier) {
+    if (supplier.currentDebt > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar el proveedor porque tiene deuda pendiente'
+      });
+    }
+    
+    const deletedSupplier = await Supplier.findByIdAndDelete(req.params.id);
+    
+    if (!deletedSupplier) {
       return res.status(404).json({
         success: false,
         message: 'Proveedor no encontrado'
@@ -127,8 +138,7 @@ export const deleteSupplier = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Proveedor eliminado con éxito',
-      data: {}
+      message: 'Proveedor eliminado con éxito'
     });
   } catch (error) {
     console.error('Error al eliminar proveedor:', error);
@@ -140,23 +150,29 @@ export const deleteSupplier = async (req, res) => {
   }
 };
 
-// Buscar proveedores por nombre o RUC
+// Búsqueda de proveedores
 export const searchSuppliers = async (req, res) => {
   try {
-    const searchTerm = req.query.term;
+    const { term } = req.query;
     
-    if (!searchTerm) {
+    if (!term) {
       return res.status(400).json({
         success: false,
         message: 'Se requiere un término de búsqueda'
       });
     }
     
+    // Crear expresión regular para búsqueda insensible a mayúsculas/minúsculas
+    const regex = new RegExp(term, 'i');
+    
     const suppliers = await Supplier.find({
       $or: [
-        { name: { $regex: searchTerm, $options: 'i' } },
-        { businessName: { $regex: searchTerm, $options: 'i' } },
-        { ruc: { $regex: searchTerm, $options: 'i' } }
+        { name: regex },
+        { businessName: regex },
+        { ruc: regex },
+        { contactPerson: regex },
+        { email: regex },
+        { phone: regex }
       ]
     }).sort({ name: 1 });
     
@@ -175,27 +191,37 @@ export const searchSuppliers = async (req, res) => {
   }
 };
 
-// Obtener estadísticas de proveedores (total, activos, inactivos)
+// Estadísticas de proveedores
 export const getSupplierStats = async (req, res) => {
   try {
-    const totalSuppliers = await Supplier.countDocuments();
-    const activeSuppliers = await Supplier.countDocuments({ isActive: true });
-    const inactiveSuppliers = await Supplier.countDocuments({ isActive: false });
+    // Contar proveedores por categoría
+    const total = await Supplier.countDocuments();
+    const active = await Supplier.countDocuments({ isActive: true });
+    const inactive = await Supplier.countDocuments({ isActive: false });
+    const withDebt = await Supplier.countDocuments({ currentDebt: { $gt: 0 } });
     
-    const suppliersWithDebt = await Supplier.countDocuments({ currentDebt: { $gt: 0 } });
-    
-    // Proveedores con mayor deuda
+    // Obtener proveedores con mayor deuda
     const topDebtSuppliers = await Supplier.find({ currentDebt: { $gt: 0 } })
       .sort({ currentDebt: -1 })
-      .limit(5);
+      .limit(5)
+      .select('name businessName currentDebt');
+    
+    // Calcular deuda total
+    const debtAggregate = await Supplier.aggregate([
+      { $match: { currentDebt: { $gt: 0 } } },
+      { $group: { _id: null, totalDebt: { $sum: '$currentDebt' } } }
+    ]);
+    
+    const totalDebt = debtAggregate.length > 0 ? debtAggregate[0].totalDebt : 0;
     
     res.status(200).json({
       success: true,
       data: {
-        total: totalSuppliers,
-        active: activeSuppliers,
-        inactive: inactiveSuppliers,
-        withDebt: suppliersWithDebt,
+        total,
+        active,
+        inactive,
+        withDebt,
+        totalDebt,
         topDebtSuppliers
       }
     });
@@ -204,6 +230,106 @@ export const getSupplierStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al obtener estadísticas de proveedores',
+      error: error.message
+    });
+  }
+};
+
+// Obtener transacciones de un proveedor
+export const getSupplierTransactions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar si el proveedor existe
+    const supplierExists = await Supplier.exists({ _id: id });
+    
+    if (!supplierExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proveedor no encontrado'
+      });
+    }
+    
+    // Obtener las transacciones ordenadas por fecha (más recientes primero)
+    const transactions = await SupplierTransaction.find({ supplier: id })
+      .sort({ date: -1 })
+      .populate('creditPurchase', 'invoiceNumber')
+      .populate('createdBy', 'name');
+    
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      data: transactions
+    });
+  } catch (error) {
+    console.error('Error al obtener transacciones:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener transacciones',
+      error: error.message
+    });
+  }
+};
+
+// Registrar una nueva transacción
+export const createSupplierTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, amount, notes, date } = req.body;
+    
+    // Validar que el proveedor exista
+    const supplier = await Supplier.findById(id);
+    
+    if (!supplier) {
+      return res.status(404).json({
+        success: false,
+        message: 'Proveedor no encontrado'
+      });
+    }
+    
+    // Validar tipo y monto
+    if (!['payment', 'debt'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de transacción inválido. Debe ser "payment" o "debt"'
+      });
+    }
+    
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El monto debe ser mayor a cero'
+      });
+    }
+    
+    // Si es un pago, verificar que no exceda la deuda actual
+    if (type === 'payment' && amount > supplier.currentDebt) {
+      return res.status(400).json({
+        success: false,
+        message: `El pago (${amount}) no puede ser mayor que la deuda actual (${supplier.currentDebt})`
+      });
+    }
+    
+    // Crear la transacción
+    const transaction = await SupplierTransaction.create({
+      supplier: id,
+      type,
+      amount,
+      notes,
+      date: date || new Date(),
+      createdBy: req.user ? req.user._id : null
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: type === 'payment' ? 'Pago registrado con éxito' : 'Deuda registrada con éxito',
+      data: transaction
+    });
+  } catch (error) {
+    console.error('Error al registrar transacción:', error);
+    res.status(400).json({
+      success: false,
+      message: 'Error al registrar transacción',
       error: error.message
     });
   }
