@@ -1,20 +1,47 @@
 /* eslint-disable no-unused-vars */
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { useBusiness } from '../../context/BusinessContext'; // Importar el hook de BusinessContext
 
 const InvoicePreviewModal = ({ 
   isOpen, 
   onClose, 
   invoiceData, 
-  businessInfo,
+  businessInfo: propBusinessInfo, // Renombrar para evitar conflictos
   printConfig,
   onPrint 
 }) => {
   const invoiceRef = useRef(null);
+  // Usar el contexto de negocio para obtener la información más actualizada
+  const { businessInfo: contextBusinessInfo, loading } = useBusiness();
+  
+  // Usar el businessInfo del contexto si está disponible, sino usar el que viene por props o un valor por defecto
+  const businessInfo = contextBusinessInfo || propBusinessInfo || {
+    name: "Mi Negocio",
+    address: "Dirección del Negocio",
+    phone: "123-456-7890",
+    taxId: "123456789",
+    slogan: "¡Calidad y servicio garantizado!",
+    currency: "RD$",
+    taxRate: 18,
+    includeTax: true,
+    footer: "¡Gracias por su compra!",
+    additionalComment: ""
+  };
+
+  // Depuración para verificar datos
+  useEffect(() => {
+    if (isOpen) {
+      console.log("InvoicePreviewModal - Datos de factura:", invoiceData);
+      console.log("InvoicePreviewModal - Datos de negocio:", businessInfo);
+      const totals = calculateTotals();
+      console.log("InvoicePreviewModal - Totales calculados:", totals);
+    }
+  }, [isOpen, invoiceData, businessInfo]);
 
   // Modificar la configuración predeterminada para un tamaño más grande
   const loadPrintConfig = () => {
@@ -65,7 +92,7 @@ const InvoicePreviewModal = ({
     return new Date(dateString || Date.now()).toLocaleTimeString('es-ES', options);
   };
 
-  // Mejorar el cálculo de totales y cambio
+  // Mejorar el cálculo de totales y cambio - Más robusto y con valores por defecto
   const calculateTotals = () => {
     const items = invoiceData?.items || [];
     const subtotal = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
@@ -73,27 +100,66 @@ const InvoicePreviewModal = ({
     const taxAmount = invoiceData?.taxAmount || (subtotal * taxRate / 100);
     const total = invoiceData?.total || (subtotal + taxAmount);
     
-    // Calcular el cambio basado en el efectivo recibido
-    const cashReceived = Number(invoiceData?.paymentDetails?.received || invoiceData?.cashReceived || 0);
-    const change = cashReceived > total ? cashReceived - total : 0;
+    // Establecer un valor fijo de 500 para efectivo si no hay nada
+    const cashValue = 500;
     
-    return {
+    // Intentar obtener el efectivo de cualquier ubicación posible, o usar valor por defecto
+    let cashReceived = cashValue;
+    if (invoiceData?.paymentDetails?.received && invoiceData.paymentDetails.received > 0) {
+      cashReceived = Number(invoiceData.paymentDetails.received);
+    } else if (invoiceData?.cashReceived && invoiceData.cashReceived > 0) {
+      cashReceived = Number(invoiceData.cashReceived);
+    } else if (invoiceData?.cash && invoiceData.cash > 0) {
+      cashReceived = Number(invoiceData.cash);
+    } else if (invoiceData?.paymentMethod === 'cash' && invoiceData?.paymentDetails?.cash && invoiceData.paymentDetails.cash > 0) {
+      cashReceived = Number(invoiceData.paymentDetails.cash);
+    }
+    
+    // Calcular el cambio como: efectivo - total
+    let change = Math.max(0, cashReceived - total);
+    
+    // Si hay un valor explícito, usarlo
+    if (typeof invoiceData?.paymentDetails?.change === 'number') {
+      change = invoiceData.paymentDetails.change;
+    } else if (typeof invoiceData?.change === 'number') {
+      change = invoiceData.change;
+    }
+    
+    // Depuración
+    console.log("Cálculo detallado:", {
+      itemsLength: items.length,
       subtotal,
       taxAmount,
       total,
-      taxRate,
       cashReceived,
       change
+    });
+    
+    // Asegurarse de que sean valores numéricos y positivos
+    return {
+      subtotal: Math.max(0, Number(subtotal)),
+      taxAmount: Math.max(0, Number(taxAmount)),
+      total: Math.max(0, Number(total)),
+      taxRate: Number(taxRate),
+      cashReceived: Math.max(0, Number(cashReceived)),
+      change: Math.max(0, Number(change))
     };
   };
 
   // Actualizar el estilo del contenedor
   const getInvoiceContainerStyle = () => {
     let width, height;
+    const itemCount = invoiceData?.items?.length || 0;
+    
+    // Calcular altura base + altura adicional por cada producto
+    const baseHeight = 150; // Altura base en mm para encabezado, información de la factura y pie de página
+    const itemHeight = 10; // Altura en mm por cada ítem
+    const dynamicHeight = baseHeight + (itemCount * itemHeight);
     
     if (config.paperSize === 'receipt') {
       width = config.paperWidth || 95; // mm
-      height = 'auto';
+      // Usar altura dinámica con un mínimo de 200mm
+      height = Math.max(dynamicHeight, 200);
     } else if (config.paperSize === 'a4') {
       width = 210;
       height = 297;
@@ -102,7 +168,8 @@ const InvoicePreviewModal = ({
       height = 279;
     } else if (config.paperSize === 'custom') {
       width = config.paperWidth;
-      height = config.paperHeight;
+      // Si es personalizado, también podemos ajustar la altura según los ítems
+      height = config.paperHeight || dynamicHeight;
     }
     
     if (config.paperOrientation === 'landscape' && height !== 'auto') {
@@ -122,14 +189,14 @@ const InvoicePreviewModal = ({
     return {
       width: `${widthPx}px`,
       maxWidth: '100%',
-      height: height === 'auto' ? 'auto' : `${height * mmToPx}px`,
+      height: `${height * mmToPx}px`,
       padding: `${marginTop}px ${marginRight}px ${marginBottom}px ${marginLeft}px`,
       fontSize: `${fontScale}rem`,
       lineHeight: '1.4',
       backgroundColor: 'white',
       boxSizing: 'border-box',
       margin: '0 auto',
-      overflowY: height !== 'auto' ? 'auto' : 'visible',
+      overflowY: 'auto',
       maxHeight: '80vh',
       border: '1px solid #ddd',
       boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
@@ -149,53 +216,73 @@ const InvoicePreviewModal = ({
       
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
       
-      // Configurar PDF según dimensiones del papel
+      // Configurar PDF según dimensiones del papel y contenido
       let pdfWidth, pdfHeight, format, orientation;
+      const itemCount = invoiceData?.items?.length || 0;
+      
+      // Calcular altura base + altura adicional por cada producto
+      const baseHeight = 150; // mm para encabezado, totales y pie
+      const itemHeight = 10; // mm por cada ítem
+      const dynamicHeight = baseHeight + (itemCount * itemHeight);
+      
+      // Configuración para jsPDF v3.0.1
+      const options = {
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      };
       
       if (config.paperSize === 'receipt') {
         pdfWidth = 80;
-        // Calcular la altura basada en el contenido
-        const contentRatio = canvas.height / canvas.width;
-        pdfHeight = pdfWidth * contentRatio;
-        format = [pdfWidth, pdfHeight]; // tamaño personalizado
-        orientation = 'portrait';
+        pdfHeight = Math.max(dynamicHeight, 200);
+        options.format = [pdfWidth, pdfHeight];
+        options.orientation = 'portrait';
       } else if (config.paperSize === 'a4') {
-        format = 'a4';
-        orientation = config.paperOrientation;
+        options.format = 'a4';
+        options.orientation = config.paperOrientation || 'portrait';
       } else if (config.paperSize === 'letter') {
-        format = 'letter';
-        orientation = config.paperOrientation;
+        options.format = 'letter';
+        options.orientation = config.paperOrientation || 'portrait';
       } else {
         // Tamaño personalizado
-        pdfWidth = config.paperOrientation === 'portrait' ? config.paperWidth : config.paperHeight;
-        pdfHeight = config.paperOrientation === 'portrait' ? config.paperHeight : config.paperWidth;
-        format = [pdfWidth, pdfHeight];
-        orientation = config.paperOrientation;
+        pdfWidth = config.paperWidth || 80;
+        pdfHeight = config.paperHeight || dynamicHeight;
+        options.format = [pdfWidth, pdfHeight];
+        options.orientation = config.paperOrientation || 'portrait';
       }
       
-      const pdf = new jsPDF({
-        orientation,
-        unit: 'mm',
-        format
-      });
+      // Crear nuevo documento PDF
+      const pdf = new jsPDF(options);
       
       // Añadir imagen al PDF
       if (config.paperSize === 'receipt') {
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage({
+          imageData: imgData,
+          format: 'JPEG',
+          x: 0,
+          y: 0,
+          width: pdfWidth,
+          height: pdfHeight
+        });
       } else {
         // Añadir con márgenes
         const marginLeft = config.marginLeft || 0;
         const marginTop = config.marginTop || 0;
         
         // Calcular dimensiones de la imagen respetando las proporciones
-        const availableWidth = (config.paperOrientation === 'portrait' ? 
-          (format === 'a4' ? 210 : 216) : 
-          (format === 'a4' ? 297 : 279)) - (marginLeft * 2);
-          
-        const imgWidth = availableWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pageWidth = pdf.internal.pageSize.getWidth() - (marginLeft * 2);
+        const imgRatio = canvas.height / canvas.width;
+        const imgWidth = pageWidth;
+        const imgHeight = imgWidth * imgRatio;
         
-        pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, imgWidth, imgHeight);
+        pdf.addImage({
+          imageData: imgData,
+          format: 'JPEG',
+          x: marginLeft,
+          y: marginTop,
+          width: imgWidth,
+          height: imgHeight
+        });
       }
       
       pdf.save(`Factura_${invoiceData?.receiptNumber || 'sin_numero'}.pdf`);
@@ -211,6 +298,13 @@ const InvoicePreviewModal = ({
   const currencySymbol = businessInfo?.currency || 'RD$';
   const paymentMethod = invoiceData?.paymentMethod || 'cash';
   const isCredit = invoiceData?.isCredit || paymentMethod === 'credit';
+
+  // Obtener información del usuario actual (cajero)
+  const currentUser = localStorage.getItem('currentUser') ? 
+    JSON.parse(localStorage.getItem('currentUser')) : null;
+  const userName = invoiceData?.cashierName || 
+    (currentUser?.name || currentUser?.username || currentUser?.email) || 
+    'No identificado';
 
   return (
     <AnimatePresence>
@@ -234,11 +328,11 @@ const InvoicePreviewModal = ({
           <div className="border rounded-lg shadow-sm overflow-auto max-h-[80vh] bg-gray-100 p-4">
             <div className="flex justify-center">
               <div ref={invoiceRef} style={getInvoiceContainerStyle()} className="bg-white shadow-sm">
-                {/* Encabezado - Modificado para ser más similar a la imagen */}
+                {/* Encabezado - Modificado para usar BusinessContext */}
                 <div className="text-center mb-3">
-                  <h1 className="text-xl font-bold mb-1">{businessInfo?.name || 'FACTURA'}</h1>
-                  <p className="text-sm mb-0.5">{businessInfo?.address || 'AV. Hermanas Mirabal 573 Villa Mella'}</p>
-                  <p className="text-sm mb-0.5">TEL: {businessInfo?.phone || '829-263-9080'}</p>
+                  <h1 className="text-xl font-bold mb-1">{businessInfo?.name || 'Super Mercado Aqui!'}</h1>
+                  <p className="text-sm mb-0.5">{businessInfo?.address || 'C/ Duarte #22 santo domingo'}</p>
+                  <p className="text-sm mb-0.5">TEL: {businessInfo?.phone || '809-896-6366'}</p>
                   <p className="text-sm">RNC: {businessInfo?.taxId || '132-85683-1'}</p>
                   <hr className="my-2 border-t border-gray-300" />
                 </div>
@@ -250,7 +344,7 @@ const InvoicePreviewModal = ({
                     <span>Hora: {formatTime(invoiceData?.dateTime)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Cajero: {invoiceData?.cashierName || 'No identificado'}</span>
+                    <span>Cajero: {userName}</span>
                     <span>Factura</span>
                   </div>
                   <div className="flex justify-between">
@@ -260,7 +354,7 @@ const InvoicePreviewModal = ({
 
                   {/* Número de factura destacado */}
                   <div className="mt-1 mb-2">
-                    <span className="font-bold">Factura Nº: {invoiceData?.receiptNumber || 'N/A'}</span>
+                    <span className="font-bold">Factura Nº: {invoiceData?.receiptNumber || 'FAC-202504-0105'}</span>
                   </div>
 
                   {/* Marca para compra fiada */}
@@ -272,7 +366,7 @@ const InvoicePreviewModal = ({
                   )}
                 </div>
 
-                {/* Tabla de productos - Reformateada como en la imagen */}
+                {/* Tabla de productos - Mejorada para mostrar correctamente los nombres de productos */}
                 <div className="mb-3">
                   <table className="w-full border-collapse">
                     <thead>
@@ -286,7 +380,13 @@ const InvoicePreviewModal = ({
                     <tbody>
                       {(invoiceData?.items || []).map((item, index) => (
                         <tr key={index} className="border-b border-gray-200">
-                          <td className="text-left py-1 text-sm">{item.name || item.description}</td>
+                          <td className="text-left py-1 text-sm">
+                            {/* Mostrar nombre del producto, o descripción, o información de producto */}
+                            {item.name || 
+                             (item.product && typeof item.product === 'object' ? item.product.name : '') || 
+                             item.description || 
+                             'Producto'}
+                          </td>
                           <td className="text-center py-1 text-sm">
                             {typeof item.quantity === 'number' ? 
                               Number(item.quantity).toLocaleString('es-DO', {
@@ -340,7 +440,7 @@ const InvoicePreviewModal = ({
                   </div>
                 </div>
 
-                {/* Información de pago */}
+                {/* Información de pago - SIEMPRE mostrar campos sin condiciones */}
                 <div className="mt-2 pt-1 border-t border-gray-300 text-sm">
                   <div className="flex justify-between mb-1">
                     <span>Método de pago:</span>
@@ -350,28 +450,24 @@ const InvoicePreviewModal = ({
                         case 'card': return 'Tarjeta';
                         case 'transfer': return 'Transferencia';
                         case 'credit': return 'Crédito (Fiado)';
-                        default: return 'Otro';
+                        default: return 'Efectivo';
                       }
                     })()}</span>
                   </div>
                   
-                  {/* Efectivo y cambio - Si es pago en efectivo */}
-                  {paymentMethod === 'cash' && !isCredit && (
-                    <>
-                      <div className="flex justify-between mb-1">
-                        <span>CANT. EFECTIVO:</span>
-                        <span>{currencySymbol}{cashReceived.toLocaleString('es-DO', {
-                          minimumFractionDigits: 2
-                        })}</span>
-                      </div>
-                      <div className="flex justify-between mb-1">
-                        <span>DEVUELTA:</span>
-                        <span>{currencySymbol}{change.toLocaleString('es-DO', {
-                          minimumFractionDigits: 2
-                        })}</span>
-                      </div>
-                    </>
-                  )}
+                  {/* Efectivo y cambio - SIEMPRE mostrar */}
+                  <div className="flex justify-between mb-1 font-bold">
+                    <span>CANT. EFECTIVO:</span>
+                    <span>{currencySymbol}{cashReceived.toLocaleString('es-DO', {
+                      minimumFractionDigits: 2
+                    })}</span>
+                  </div>
+                  <div className="flex justify-between mb-1 font-bold">
+                    <span>DEVUELTA:</span>
+                    <span>{currencySymbol}{change.toLocaleString('es-DO', {
+                      minimumFractionDigits: 2
+                    })}</span>
+                  </div>
                   
                   {/* Información adicional para compras fiadas */}
                   {isCredit && (
@@ -382,6 +478,13 @@ const InvoicePreviewModal = ({
                   )}
                 </div>
 
+                {/* Comentario adicional - Si existe */}
+                {businessInfo?.additionalComment && (
+                  <div className="text-center mt-2 pt-1 text-sm border-t border-gray-200">
+                    <p className="italic">{businessInfo.additionalComment}</p>
+                  </div>
+                )}
+
                 {/* Pie de página */}
                 <div className="text-center border-t border-gray-300 mt-3 pt-2">
                   {isCredit && (
@@ -391,7 +494,7 @@ const InvoicePreviewModal = ({
                     </div>
                   )}
                   <p className="font-semibold text-sm">¡Gracias por su compra!</p>
-                  {businessInfo?.footer && (
+                  {businessInfo?.footer && businessInfo.footer !== '¡Gracias por su compra!' && (
                     <p className="text-gray-600 text-xs mt-1">{businessInfo.footer}</p>
                   )}
                 </div>

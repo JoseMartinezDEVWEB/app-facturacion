@@ -14,10 +14,12 @@ import clienteRoutes  from './routes/clienteRoutes.js';
 import providerRoutes from './routes/providerRoutes.js';
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes.js';
 import creditPaymentRoutes from './routes/creditPaymentRoutes.js';
-import facturaRoutes from './routes/invoiceRoutes.js';
+// import facturaRoutes from './routes/invoiceRoutes.js';
 import creditNoteRoutes from './routes/creditNoteRoutes.js';
 import quoteRoutes from './routes/quoteRoutes.js';
 import retentionRoutes from './routes/retentionRoutes.js';
+import supplierRoutes from './routes/supplierRoutes.js';
+import creditPurchaseRoutes from './routes/creditPurchaseRoutes.js';
 
 import path from "path";
 import morgan from "morgan";
@@ -142,17 +144,19 @@ app.use("/api/products", productRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/business", businessRouter);
 app.use("/api/daily-reports", daliyRepoortRouter);
-app.use("/api/newinvoices", invoiceRoutes)
+app.use("/api/newinvoices", invoiceRoutes);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/credit-payments', creditPaymentRoutes);
-app.use('/api/facturas', facturaRoutes);
+// app.use('/api/facturas', facturaRoutes);
 app.use('/api/credit-notes', creditNoteRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/retentions', retentionRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/credit-purchases', creditPurchaseRoutes);
 
 
 const port = process.env.PORT || 4000;

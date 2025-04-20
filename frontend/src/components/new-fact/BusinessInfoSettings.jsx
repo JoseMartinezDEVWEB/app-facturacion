@@ -1,7 +1,7 @@
 import  { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, X, Building, Phone, MapPin, Globe, Hash, Mail } from 'lucide-react';
+import { Save, X, Building, Phone, MapPin, Globe, Hash, Mail, MessageCircle } from 'lucide-react';
 
 // Clave para almacenar la configuración en localStorage
 const BUSINESS_INFO_KEY = 'business_info_settings';
@@ -18,6 +18,7 @@ const BusinessInfoSettings = ({ isOpen, onClose, onSave }) => {
     logoUrl: '',
     footer: '¡Gracias por su compra!',
     currency: 'RD$', // Peso dominicano por defecto
+    additionalComment: '', // Nuevo campo para comentarios opcionales
   });
 
   // Cargar configuración guardada al abrir
@@ -244,6 +245,28 @@ const BusinessInfoSettings = ({ isOpen, onClose, onSave }) => {
                   placeholder="Mensaje que aparecerá al final de la factura"
                   rows="2"
                 />
+              </div>
+              
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Comentario Adicional
+                </label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 rounded-l-md">
+                    <MessageCircle size={16} />
+                  </span>
+                  <textarea
+                    name="additionalComment"
+                    value={businessInfo.additionalComment}
+                    onChange={handleInputChange}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Texto adicional que aparecerá debajo del pie de página (ej: políticas de devolución, información legal, etc.)"
+                    rows="3"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Este texto aparecerá como un comentario adicional en la parte inferior de la factura.
+                </p>
               </div>
             </div>
           </div>

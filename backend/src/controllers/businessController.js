@@ -142,3 +142,63 @@ export const saveBusinessInfo = async (req, res) => {
         });
     }
 };
+
+export const createOrUpdateBusiness = async (req, res) => {
+  try {
+    const { name, taxId, address, phone, email, website, comments } = req.body;
+    let logo = '';
+
+    // Si se proporcionó un archivo de logo
+    if (req.file) {
+      logo = req.file.path;
+    }
+
+    // Buscar si ya existe un negocio (solo debe haber uno en el sistema)
+    let business = await Business.findOne();
+
+    if (business) {
+      // Actualizar el negocio existente
+      business.name = name;
+      business.taxId = taxId;
+      business.address = address;
+      business.phone = phone;
+      business.email = email;
+      business.website = website;
+      business.comments = comments;
+      
+      // Solo actualizar el logo si se proporcionó uno nuevo
+      if (logo) {
+        business.logo = logo;
+      }
+
+      await business.save();
+    } else {
+      // Crear un nuevo negocio
+      business = new Business({
+        name,
+        taxId,
+        address,
+        phone,
+        email,
+        website,
+        comments,
+        logo
+      });
+
+      await business.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: business,
+      message: 'Información del negocio guardada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error en createOrUpdateBusiness:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al guardar la información del negocio',
+      error: error.message
+    });
+  }
+};

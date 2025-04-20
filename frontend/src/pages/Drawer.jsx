@@ -21,6 +21,7 @@ const menuItems = [
   { id: '/dashboard/categorias', label: 'Categorías', icon: '🏷️' },
   { id: '/dashboard/GestionGasto', label: 'Gestion de Gastos', icon: '💰' },
   { id: '/dashboard/clientes', label: 'Usuarios', icon: '👥' },
+  { id: '/dashboard/proveedores', label: 'Proveedores', icon: '🏭' },
   { id: '/dashboard/configuracion', label: 'Configuración', icon: '⚙️' }
 ];
 

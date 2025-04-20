@@ -31,9 +31,9 @@ export const PAYMENT_TYPES = {
 
 // Estados de proveedor
 export const SUPPLIER_STATUS = {
-  ACTIVE: 'active',
-  INACTIVE: 'inactive',
-  PENDING: 'pending'
+  ACTIVE: 'activo',
+  INACTIVE: 'inactivo',
+  PENDING: 'pendiente'
 };
 
 // Roles de usuario

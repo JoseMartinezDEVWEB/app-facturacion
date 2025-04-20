@@ -158,13 +158,89 @@ export const createInvoice = async (req, res) => {
 // Mantenemos el resto del controlador igual
 export const getInvoices = async (req, res) => {
   try {
-    const invoices = await newInvoice.find({ business: req.user.businessId })
+    const {
+      customer,
+      startDate,
+      endDate,
+      status,
+      paymentMethod,
+      isFiscal,
+      minTotal,
+      maxTotal,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const filter = { business: req.user.businessId };
+
+    // Aplicar filtros
+    if (customer) {
+      filter['customer.name'] = { $regex: customer, $options: 'i' };
+    }
+
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    } else if (startDate) {
+      filter.createdAt = { $gte: new Date(startDate) };
+    } else if (endDate) {
+      filter.createdAt = { $lte: new Date(endDate) };
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (paymentMethod) {
+      filter.paymentMethod = paymentMethod;
+    }
+
+    // Agregar filtro de estado de pago para manejar la pestaña "pendientes"
+    if (req.query.paymentStatus === 'pending') {
+      filter.isCredit = true;
+      filter.creditStatus = 'pending';
+    }
+
+    if (isFiscal !== undefined) {
+      // Adaptamos este filtro ya que newInvoice no tiene campo isFiscal
+      // Podemos crear lógica aquí para manejar este caso específico
+      // Por ahora lo comentamos
+      // filter.isFiscal = isFiscal === 'true';
+    }
+
+    if (minTotal && maxTotal) {
+      filter.total = { $gte: Number(minTotal), $lte: Number(maxTotal) };
+    } else if (minTotal) {
+      filter.total = { $gte: Number(minTotal) };
+    } else if (maxTotal) {
+      filter.total = { $lte: Number(maxTotal) };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // Consulta de facturas con filtros y paginación
+    const invoices = await newInvoice.find(filter)
       .populate('cashier', 'name')
       .populate('items.product', 'name')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
 
-    res.json(invoices);
+    // Contar el total de documentos para la paginación
+    const total = await newInvoice.countDocuments(filter);
+    const totalPages = Math.ceil(total / Number(limit));
+
+    res.json({
+      data: invoices,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      totalItems: total
+    });
   } catch (error) {
+    console.error("Error al obtener facturas:", error);
     res.status(500).json({
       message: 'Error al obtener facturas',
       error: error.message

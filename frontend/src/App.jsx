@@ -10,6 +10,7 @@ import DashboardHome from './pages/page/DashboardHome';
 import  Productos  from './pages/page/Productos';
 import  Categorias  from './pages/page/Categorias';
 import  Facturas  from './pages/page/Facturas';
+import CrearFactura from './pages/page/CrearFactura';
 import GastoHome from './pages/page/GastoHome';
 import { ClienteForm } from './pages/page/ClienteForm';
 import BusinessSettings from './pages/page/BusinessSettings';
@@ -28,6 +29,13 @@ import Retenciones from './pages/page/Retenciones';
 import CrearRetencion from './pages/page/CrearRetencion';
 import DetalleRetencion from './pages/page/DetalleRetencion';
 import EditarRetencion from './pages/page/EditarRetencion';
+
+// Importar los componentes de proveedores y compras a crédito
+import Proveedores from './pages/page/Proveedores';
+import ComprasCredito from './pages/page/ComprasCredito';
+import CrearCompraCredito from './pages/page/CrearCompraCredito';
+import DetalleCompraCredito from './pages/page/DetalleCompraCredito';
+import RegistrarPagoCompra from './pages/page/RegistrarPagoCompra';
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
@@ -66,6 +74,7 @@ const App = () => {
               
               {/* Rutas para Facturas */}
               <Route path="facturas" element={<Facturas />} />
+              <Route path="facturas/crear" element={<CrearFactura />} />
               <Route path="facturas/:id" element={<FacturaDetalle />} />
               
               {/* Rutas para Notas de Crédito */}
@@ -86,7 +95,16 @@ const App = () => {
               <Route path="retenciones/:id" element={<DetalleRetencion />} />
               <Route path="retenciones/:id/editar" element={<EditarRetencion />} />
               <Route path="crear-retencion/:invoiceId" element={<CrearRetencion />} />
-
+              
+              {/* Rutas para proveedores */}
+              <Route path="proveedores" element={<Proveedores />} />
+              
+              {/* Rutas para compras a crédito */}
+              <Route path="compras-credito" element={<ComprasCredito />} />
+              <Route path="compras-credito/:id" element={<DetalleCompraCredito />} />
+              <Route path="crear-compra-credito" element={<CrearCompraCredito />} />
+              <Route path="compras-credito/:id/pago" element={<RegistrarPagoCompra />} />
+              
               {/* Ruta para configuración del negocio */}
               <Route path="configuracion" element={<BusinessSettings />} />
             </Route>

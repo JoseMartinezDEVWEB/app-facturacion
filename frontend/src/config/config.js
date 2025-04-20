@@ -1,6 +1,9 @@
 // Base URL para la API
 export const API_BASE_URL = 'http://localhost:4000/api';
 
+// URL completa para uso directo en componentes
+export const API_URL = API_BASE_URL;
+
 // Rutas de la API
 export const API_ROUTES = {
   // Autenticación
