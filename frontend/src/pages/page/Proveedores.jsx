@@ -261,164 +261,318 @@ const Proveedores = () => {
       {/* Tarjetas de estadísticas */}
       <Grid container spacing={3} mb={4}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: 3, 
+            height: '100%',
+            background: 'linear-gradient(135deg, #bbdefb 0%, #90caf9 100%)',
+            borderLeft: '4px solid #1976d2'
+          }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Total de Proveedores
               </Typography>
-              <Typography variant="h4">{supplierStats.total}</Typography>
+              <Typography variant="h3" fontWeight="bold" color="primary.dark">
+                {supplierStats.total}
+              </Typography>
+              <Box sx={{ mt: 2, opacity: 0.7 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: 3, 
+            height: '100%',
+            background: 'linear-gradient(135deg, #c8e6c9 0%, #81c784 100%)',
+            borderLeft: '4px solid #388e3c'
+          }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle2" color="success.dark" fontWeight="bold" gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Proveedores Activos
               </Typography>
-              <Typography variant="h4">{supplierStats.active}</Typography>
+              <Typography variant="h3" fontWeight="bold" color="success.dark">
+                {supplierStats.active}
+              </Typography>
+              <Box sx={{ mt: 2, opacity: 0.7 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 11 12 14 22 4"></polyline>
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                </svg>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: 3, 
+            height: '100%',
+            background: 'linear-gradient(135deg, #ffecb3 0%, #ffd54f 100%)',
+            borderLeft: '4px solid #ffa000'
+          }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle2" color="warning.dark" fontWeight="bold" gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Proveedores Inactivos
               </Typography>
-              <Typography variant="h4">{supplierStats.inactive}</Typography>
+              <Typography variant="h3" fontWeight="bold" color="warning.dark">
+                {supplierStats.inactive}
+              </Typography>
+              <Box sx={{ mt: 2, opacity: 0.7 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                </svg>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: 3, 
+            height: '100%',
+            background: 'linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%)',
+            borderLeft: '4px solid #d32f2f'
+          }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle2" color="error.dark" fontWeight="bold" gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Con Deuda Pendiente
               </Typography>
-              <Typography variant="h4">{supplierStats.withDebt}</Typography>
+              <Typography variant="h3" fontWeight="bold" color="error.dark">
+                {supplierStats.withDebt}
+              </Typography>
+              <Box sx={{ mt: 2, opacity: 0.7 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" mb={3} justifyContent="space-between">
-          <TextField
-            label="Buscar proveedores"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={handleSearch} edge="end">
-                    <SearchIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{ minWidth: { sm: 350 } }}
-          />
-          <Stack direction="row" spacing={1}>
-            <Button
+      <Paper 
+        elevation={2} 
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          borderRadius: 2,
+          background: 'linear-gradient(to right, #ffffff, #f9fafb)'
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
+          <Box sx={{ width: { xs: '100%', sm: 'auto' }, flexGrow: 1 }}>
+            <TextField
+              fullWidth
               variant="outlined"
-              color="primary"
-              startIcon={<RefreshIcon />}
+              placeholder="Buscar proveedores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                sx: { 
+                  borderRadius: 2,
+                  '&:hover': { 
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                  },
+                  '&.Mui-focused': {
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }
+                }
+              }}
+              sx={{ backgroundColor: 'white' }}
+            />
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button 
+              variant="outlined" 
+              startIcon={<RefreshIcon />} 
               onClick={() => {
                 setSearchTerm('');
                 fetchSuppliers();
               }}
+              sx={{ 
+                borderRadius: 2,
+                borderWidth: 1.5,
+                fontWeight: 'bold',
+                textTransform: 'none',
+                px: 2
+              }}
             >
               Actualizar
             </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
+            <Button 
+              variant="contained" 
+              startIcon={<AddIcon />} 
               onClick={() => handleOpenDialog()}
+              sx={{ 
+                borderRadius: 2,
+                background: 'linear-gradient(45deg, #42a5f5 30%, #1976d2 90%)',
+                boxShadow: '0 4px 10px rgba(25, 118, 210, 0.3)',
+                fontWeight: 'bold',
+                textTransform: 'none',
+                px: 2,
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #1976d2 30%, #1565c0 90%)',
+                  boxShadow: '0 6px 12px rgba(25, 118, 210, 0.4)',
+                }
+              }}
             >
               Nuevo Proveedor
             </Button>
           </Stack>
         </Stack>
+      </Paper>
 
+      <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+            <CircularProgress sx={{ color: 'primary.main' }} />
           </Box>
         ) : (
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Empresa</TableCell>
-                  <TableCell>RUC</TableCell>
-                  <TableCell>Contacto</TableCell>
-                  <TableCell>Deuda Actual</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
+                <TableRow sx={{ backgroundColor: 'primary.light' }}>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Nombre</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Empresa</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>RUC</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Contacto</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Deuda Actual</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Estado</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {suppliers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
-                      No hay proveedores registrados
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Box sx={{ 
+                          backgroundColor: 'grey.100', 
+                          width: '60px', 
+                          height: '60px', 
+                          borderRadius: '50%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          margin: '0 auto 16px'
+                        }}>
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                          </svg>
+                        </Box>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                          No hay proveedores registrados
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Añade un nuevo proveedor para comenzar
+                        </Typography>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ) : (
                   suppliers.map((supplier) => (
-                    <TableRow key={supplier._id}>
-                      <TableCell>{supplier.name}</TableCell>
+                    <TableRow 
+                      key={supplier._id}
+                      sx={{ 
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                          transition: 'background-color 0.2s ease'
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body1" fontWeight="medium">{supplier.name}</Typography>
+                      </TableCell>
                       <TableCell>{supplier.businessName || '-'}</TableCell>
                       <TableCell>{supplier.ruc || '-'}</TableCell>
                       <TableCell>
-                        {supplier.phone || '-'}
-                        <br />
-                        <Typography variant="caption" color="textSecondary">
-                          {supplier.email || '-'}
-                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="body2">{supplier.phone || '-'}</Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            {supplier.email || '-'}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Typography
-                          color={supplier.currentDebt > 0 ? 'error' : 'textPrimary'}
-                          fontWeight={supplier.currentDebt > 0 ? 'bold' : 'normal'}
+                          sx={{
+                            color: supplier.currentDebt > 0 ? 'error.main' : 'success.main',
+                            fontWeight: supplier.currentDebt > 0 ? 'bold' : 'normal',
+                            backgroundColor: supplier.currentDebt > 0 ? 'error.lightest' : 'transparent',
+                            py: supplier.currentDebt > 0 ? 0.5 : 0,
+                            px: supplier.currentDebt > 0 ? 1 : 0,
+                            borderRadius: 1,
+                            display: 'inline-block'
+                          }}
                         >
                           {formatCurrency(supplier.currentDebt || 0)}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography
-                          variant="body2"
+                        <Box
                           sx={{
+                            backgroundColor: supplier.isActive ? 'success.lightest' : 'grey.lightest',
                             color: supplier.isActive ? 'success.main' : 'text.disabled',
-                            fontWeight: 'medium'
+                            fontWeight: 'medium',
+                            py: 0.5,
+                            px: 1.5,
+                            borderRadius: 10,
+                            display: 'inline-block',
+                            fontSize: '0.75rem'
                           }}
                         >
                           {supplier.isActive ? 'Activo' : 'Inactivo'}
-                        </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell align="center">
-                        <Tooltip title="Editar proveedor">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleOpenDialog(supplier)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar proveedor">
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeleteConfirm(supplier)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" spacing={1} justifyContent="center">
+                          <Tooltip title="Editar proveedor">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleOpenDialog(supplier)}
+                              sx={{ 
+                                color: 'primary.main',
+                                '&:hover': { 
+                                  backgroundColor: 'primary.lightest',
+                                  transform: 'scale(1.1)'
+                                },
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar proveedor">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleDeleteConfirm(supplier)}
+                              sx={{ 
+                                color: 'error.main',
+                                '&:hover': { 
+                                  backgroundColor: 'error.lightest',
+                                  transform: 'scale(1.1)'
+                                },
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))
