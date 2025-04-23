@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api from '../config/apis';
+import { login as apiLogin, logout as apiLogout } from '../services/authService';
 
 // Crear contexto
 const AuthContext = createContext();
@@ -37,40 +37,32 @@ export const AuthProvider = ({ children }) => {
   }, [checkAuth]);
 
   const login = async (credentials) => {
+    setLoading(true);
+    setError(null);
     try {
-      console.log('AuthContext: Iniciando sesión con:', credentials);
-      setError(null);
+      console.log('AuthContext: Llamando a authService.login con:', credentials.email);
+      const { token, user: userData } = await apiLogin(credentials.email, credentials.password);
       
-      const response = await api.post('/login', credentials);
-      
-      console.log('Respuesta login:', response);
-      
-      // Verificar la respuesta y guardar el token
-      if (response && response.data && response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        setIsAuthenticated(true);
-        
-        // Si la respuesta incluye información del usuario, guardarla
-        if (response.data.user) {
-          setUser(response.data.user);
-        }
-        
-        return response.data;
-      } else {
-        const errorMsg = 'La respuesta no incluye un token válido';
-        console.warn(errorMsg, response);
-        setError(errorMsg);
-        throw new Error(errorMsg);
-      }
-    } catch (error) {
-      setError(error.message || 'Error en el inicio de sesión');
-      console.error('Error en login (AuthContext):', error);
-      throw error;
+      console.log('Respuesta de authService.login:', { token, user: userData });
+
+      setIsAuthenticated(true);
+      setUser(userData);
+      setLoading(false);
+      return { token, user: userData };
+
+    } catch (err) {
+      const errorMessage = err.message || 'Error en el inicio de sesión';
+      console.error('Error en login (AuthContext):', errorMessage, err);
+      setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
+      setLoading(false);
+      throw err;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    apiLogout();
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -101,5 +93,32 @@ export const useAuth = () => {
   }
   return context;
 };
+
+const login = async (credentials) => {
+  setLoading(true);
+  setError(null);
+  try {
+    console.log('AuthContext: Llamando a authService.login con:', credentials.email);
+    const data = await apiLogin(credentials.email, credentials.password);
+    
+    // Guarda token en localStorage (aunque esto ya lo hace authService)
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+    
+    setIsAuthenticated(true);
+    setUser(data.user || null);
+    setLoading(false);
+    return data;
+  } catch (err) {
+    const errorMessage = err.message || 'Error al iniciar sesión';
+    console.error('Error en login (AuthContext):', errorMessage, err);
+    setError(errorMessage);
+    setIsAuthenticated(false);
+    setUser(null);
+    setLoading(false);
+    throw err;
+  }
+}; 
 
 export default AuthContext;

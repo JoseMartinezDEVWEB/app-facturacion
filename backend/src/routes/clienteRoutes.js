@@ -9,12 +9,12 @@ import {
   saldarDeuda,         // Nueva función
   abonarDeuda          // Nueva función
 } from '../controllers/clienteController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { authMiddleware } from '../middleware/authmiddleware.js';
 
 const router = express.Router();
 
 // Proteger todas las rutas con autenticación
-router.use(protect);
+router.use(authMiddleware);
 
 // Rutas para estadísticas y búsqueda
 router.get('/stats', getClientesStats);

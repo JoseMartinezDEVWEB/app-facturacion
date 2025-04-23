@@ -78,16 +78,19 @@ const Drawer = ({ isOpen, onClose }) => {
     try {
       setUserInfo(prev => ({ ...prev, isLoading: true }));
       
-      const response = await api.get('/users/info');
+      // Hacer la petición al endpoint correcto de auth
+      const response = await api.get('/auth/users/info');
       
       if (response && response.data) {
+        // El backend devuelve 'username' y 'role'
+        const { username, role } = response.data;
         // Almacenar en localStorage para persistencia
-        localStorage.setItem('userName', response.data.nombre || '');
-        localStorage.setItem('userRole', response.data.rol || '');
+        localStorage.setItem('userName', username);
+        localStorage.setItem('userRole', role);
         
         setUserInfo({
-          nombre: response.data.nombre || '',
-          rol: response.data.rol || '',
+          nombre: username,
+          rol: role,
           isLoading: false
         });
         

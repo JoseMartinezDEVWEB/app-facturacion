@@ -1,21 +1,15 @@
 import axios from 'axios';
 import { API_ROUTES } from '../config/config';
-
-// Configurar axios para usar la URL base correcta
-axios.defaults.baseURL = 'http://localhost:4000';
+import api from '../config/axiosConfig';
 
 /**
  * Obtiene la configuración de autenticación para las solicitudes HTTP
  * @returns {Object} Objeto de configuración con el token de autenticación
  */
 export const getAuthConfig = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : ''
-    }
-  };
+  // Este método ya no es necesario porque configuramos axios globalmente,
+  // pero lo mantenemos para mantener compatibilidad con código existente
+  return {};
 };
 
 /**
@@ -24,6 +18,7 @@ export const getAuthConfig = () => {
  * @param {string} password - Contraseña del usuario
  * @returns {Promise<Object>} Datos del usuario y token
  */
+/*
 export const login = async (email, password) => {
   try {
     const response = await axios.post(API_ROUTES.AUTH.LOGIN, { email, password });
@@ -39,12 +34,17 @@ export const login = async (email, password) => {
   }
 };
 
+*/
+
 /**
  * Cierra la sesión del usuario
  */
+/*
 export const logout = () => {
   localStorage.removeItem('token');
 };
+
+*/
 
 /**
  * Verifica si el usuario está autenticado
@@ -78,3 +78,61 @@ export const validateToken = async () => {
     return false;
   }
 }; 
+
+
+export const login = async (email, password) => {
+  try {
+    // Cambia la ruta a la correcta
+    const response = await api.post('/auth/login', { email, password });
+    
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      // También guarda el refresh token si tu API lo proporciona
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error en authService.login:', error);
+    if (error.response?.status === 401) {
+      throw new Error('Credenciales inválidas');
+    }
+    throw error;
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  return true;
+};
+
+export const refreshToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (!refreshToken) {
+      throw new Error('No hay refresh token disponible');
+    }
+    
+    const response = await api.post('/auth/refresh-token', { refreshToken });
+    
+    if (response.data && response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      // También actualiza el refresh token si la API lo devuelve
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error al refrescar token:', error);
+    // Eliminar los tokens si hay un error de refresco
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    throw error;
+  }
+};

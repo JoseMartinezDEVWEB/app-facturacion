@@ -35,40 +35,12 @@ app.use(morgan('dev'))
 
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de CORS que permite acceso remoto
+// Simplificamos la configuración CORS para desarrollo
 app.use(cors({
-    origin: function(origin, callback) {
-        // Permitir solicitudes sin origen (como aplicaciones móviles o curl)
-        if (!origin) return callback(null, true);
-        
-        // Lista de orígenes permitidos
-        const allowedOrigins = [
-            'http://localhost:5173', 
-            'http://127.0.0.1:5173',
-            // Permitir acceder desde la IP local en la red
-            /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/,
-            /^http:\/\/172\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/,
-            /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/
-        ];
-        
-        // Verificar si el origen está permitido
-        const allowed = allowedOrigins.some(allowedOrigin => {
-            if (typeof allowedOrigin === 'string') {
-                return allowedOrigin === origin;
-            }
-            return allowedOrigin.test(origin);
-        });
-        
-        if (allowed) {
-            return callback(null, true);
-        } else {
-            const msg = 'El origen CORS no está permitido';
-            return callback(new Error(msg), false);
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*', // Permitir cualquier origen en desarrollo
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(express.json());
@@ -84,17 +56,19 @@ app.use((req, res, next) => {
     next();
 });
 
-// Headers adicionales de CORS - Permitir acceso desde cualquier origen aprobado
+// Headers adicionales de CORS - OPCIONAL: eliminar esta sección si ya funciona el CORS arriba
 app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-        // Devolver el mismo origen que hizo la solicitud si está permitido
-        res.header('Access-Control-Allow-Origin', origin);
-    }
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    next();
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Manejo de solicitudes preflight OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
 });
 
 // Middleware para acceso remoto con autenticación HTTP básica
@@ -139,7 +113,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use("/api", userRouter);
+app.use("/api/auth", userRouter);
 app.use("/api/products", productRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/business", businessRouter);

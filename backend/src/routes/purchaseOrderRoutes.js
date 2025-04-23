@@ -10,12 +10,12 @@ import {
   getPendingPurchaseOrders,
   deletePurchaseOrder
 } from '../controllers/purchaseOrderController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { authMiddleware } from '../middleware/authmiddleware.js';
 
 const router = express.Router();
 
 // Todas las rutas requieren autenticación
-router.use(protect);
+router.use(authMiddleware);
 
 // Rutas principales
 router.route('/')

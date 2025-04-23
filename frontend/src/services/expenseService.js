@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
 
-const API_URL = '/api/expenses';
+const API_URL = '/expenses';
 
 // Obtener todos los gastos con filtros opcionales
 export const getExpenses = async (filters = {}) => {

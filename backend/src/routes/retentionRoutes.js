@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/authmiddleware.js';
 import {
   createRetention,
   getRetentions,
@@ -14,29 +14,33 @@ import {
 
 const router = express.Router();
 
-// Rutas públicas
+// Aplicar el middleware de autenticación a todas las rutas
+// Si necesitas proteger rutas específicas de forma diferente, puedes aplicarlo individualmente
+router.use(authMiddleware);
+
+// Rutas (ya no necesitan el middleware individual si se usa router.use)
 router.route('/')
-  .get(protect, getRetentions)
-  .post(protect, createRetention);
+  .get(getRetentions)
+  .post(createRetention);
 
 router.route('/:id')
-  .get(protect, getRetentionById)
-  .put(protect, updateRetention)
-  .delete(protect, deleteRetention);
+  .get(getRetentionById)
+  .put(updateRetention)
+  .delete(deleteRetention);
 
 // Rutas para procesar retenciones
 router.route('/:id/process')
-  .post(protect, processRetention);
+  .post(processRetention);
 
 router.route('/:id/cancel')
-  .post(protect, cancelRetention);
+  .post(cancelRetention);
 
 // Ruta para obtener retenciones por factura
 router.route('/invoice/:invoiceId')
-  .get(protect, getRetentionsByInvoice);
+  .get(getRetentionsByInvoice);
 
 // Ruta para generar PDF
 router.route('/:id/pdf')
-  .get(protect, generateRetentionPdf);
+  .get(generateRetentionPdf);
 
 export default router; 

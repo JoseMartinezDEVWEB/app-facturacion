@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
 
-const API_URL = '/api/clientes';
+const API_URL = '/clientes';
 
 /**
  * Obtiene todos los clientes con filtros opcionales

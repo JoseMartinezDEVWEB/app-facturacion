@@ -9,12 +9,12 @@ import {
   addProductToProvider,
   deleteProvider
 } from '../controllers/providerController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { authMiddleware } from '../middleware/authmiddleware.js';
 
 const router = express.Router();
 
 // Todas las rutas requieren autenticación
-router.use(protect);
+router.use(authMiddleware);
 
 // Rutas para proveedores
 router.route('/')

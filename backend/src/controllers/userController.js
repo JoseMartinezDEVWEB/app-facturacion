@@ -82,7 +82,7 @@ export const login = async (req, res) => {
       const token = jwt.sign(
         { userId: user._id, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: '30d' }
+        { expiresIn: '60d' }
       );
   
       res.json({
@@ -139,25 +139,29 @@ export const createInitialAdmin = async (req, res) => {
 
   export const getUserInfo = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const user = await User.findById(userId).select('-password');
+        // El middleware authMiddleware ya adjuntó el usuario (sin password)
+        // req.user contiene el objeto User completo
+        const user = req.user;
 
         if (!user) {
+            // Esto no debería ocurrir si authMiddleware funcionó, pero por seguridad
             return res.status(404).json({
-                msg: 'Usuario no encontrado'
+                msg: 'Usuario no encontrado o no autenticado'
             });
         }
 
+        // Devolver solo la información necesaria
         res.json({
-            nombre: user.nombre,
-            rol: user.rol,
-            email: user.email
+            id: user._id, // o user.id
+            username: user.username,
+            email: user.email,
+            role: user.role
         });
 
     } catch (error) {
-        console.log(error);
+        console.error('Error fetching user info:', error);
         res.status(500).json({
-            msg: 'Error del servidor'
+            msg: 'Error del servidor al obtener información del usuario'
         });
     }
 };

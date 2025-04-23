@@ -5,15 +5,15 @@ import {
   markMultipleAsPaid,
   getCreditPaymentStats 
 } from '../controllers/creditPaymentController.js';
-import { protect, restrictTo } from '../middleware/authMiddleware.js';
+import { authMiddleware, checkRole } from '../middleware/authmiddleware.js';
 
 const router = express.Router();
 
-// Proteger todas las rutas
-router.use(protect);
+// Proteger todas las rutas (requiere autenticación)
+router.use(authMiddleware);
 
-// Rutas para administradores y encargados
-router.use(restrictTo('admin', 'encargado'));
+// Restringir todas las rutas a roles específicos
+router.use(checkRole(['admin', 'encargado']));
 
 // Obtener pagos pendientes
 router.get('/', getPendingPayments);

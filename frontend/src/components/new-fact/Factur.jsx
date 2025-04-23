@@ -64,7 +64,7 @@ const getAuthToken = () => {
   }
   
   if (!token) {
-    console.warn('No se encontró token de autenticación en ninguna ubicación común');
+    // console.warn('No se encontró token de autenticación en ninguna ubicación común');
   } else {
     console.log('Token encontrado, formato:', token.substring(0, 15) + '...');
   }
@@ -129,7 +129,12 @@ axios.interceptors.request.use(config => {
 axios.interceptors.response.use(
   response => response,
   async error => {
-    const originalRequest = error.config;
+    const originalRequest = error.config || {};
+    const url = originalRequest.url || '';
+    // No aplicar refresh token en endpoints de autenticación
+    if (url.includes('/auth/login') || url.includes('/auth/refresh-token') || url.includes('/auth/check-session')) {
+      return Promise.reject(error);
+    }
     
     // Solo intentar refresh si es error 401 y no hemos intentado ya
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -152,14 +157,14 @@ axios.interceptors.response.use(
       
       try {
         // Intentar obtener un nuevo token
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
+        const refreshTokenValue = localStorage.getItem('refreshToken');
+        if (!refreshTokenValue) {
           throw new Error('No hay refresh token disponible');
         }
         
         console.log('Intentando refrescar token...');
-        const { data } = await axios.post(`${API_URL}/auth/refresh`, { 
-          refreshToken 
+        const { data } = await axios.post(`${API_URL}/auth/refresh-token`, {
+          refreshToken: refreshTokenValue
         }, {
           headers: {
             Authorization: null // No enviar el token expirado
@@ -169,9 +174,9 @@ axios.interceptors.response.use(
         // Guardar nuevo token y actualizar configuración
         if (data && data.token) {
           console.log('Token refrescado exitosamente');
-          localStorage.setItem('auth_token', data.token);
+          localStorage.setItem('token', data.token);
           if (data.refreshToken) {
-            localStorage.setItem('refresh_token', data.refreshToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
           }
           
           // Procesar cola con éxito
@@ -189,8 +194,8 @@ axios.interceptors.response.use(
         // Limpiar tokens solo si hay un error real de autenticación
         if (refreshError.response?.status === 401 || 
             refreshError.response?.status === 403) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
           
           // Procesar cola con error
           processQueue(refreshError, null);

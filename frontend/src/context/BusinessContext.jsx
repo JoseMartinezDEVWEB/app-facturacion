@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getBusinessInfo } from '../services/businessService';
 import { toast } from 'react-hot-toast';
+import { useAuth } from './AuthContext';
 
 const BusinessContext = createContext();
 
@@ -10,6 +11,7 @@ export const BusinessProvider = ({ children }) => {
   const [businessInfo, setBusinessInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   // Usar useCallback para evitar recreaciones innecesarias de la función
   const fetchBusinessInfo = useCallback(async () => {
@@ -29,14 +31,18 @@ export const BusinessProvider = ({ children }) => {
     }
   }, [loading]);
 
-  // Cargar datos del negocio solo al montar el componente
+  // Cargar datos del negocio solo al montar el componente o al autenticar
   useEffect(() => {
-    // Si ya tenemos datos o estamos cargando, no hacer nada
-    if (businessInfo || loading === false) return;
-    
+    // Si no está autenticado, marcar como cargado y salir
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+    // Si ya tenemos datos, no hacer nada
+    if (businessInfo) return;
+    // Autenticado y aún no cargado: obtener datos del negocio
     fetchBusinessInfo();
-    // Solo depender de fetchBusinessInfo para evitar loops infinitos
-  }, [fetchBusinessInfo, businessInfo, loading]);
+  }, [isAuthenticated, fetchBusinessInfo, businessInfo]);
 
   // Actualizar datos del negocio en el contexto
   const updateBusinessInfo = useCallback((newInfo) => {

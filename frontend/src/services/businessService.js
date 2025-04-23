@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/api/business';
+const API_URL = '/business';
 
 // Obtener información del negocio
 export const getBusinessInfo = async () => {

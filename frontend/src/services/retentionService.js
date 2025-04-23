@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
 
-const API_URL = '/api/retentions';
+const API_URL = '/retentions';
 
 /**
  * Obtiene todas las retenciones con filtros opcionales

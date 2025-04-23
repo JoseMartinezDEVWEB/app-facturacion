@@ -1,11 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { AuthProvider } from './context/AuthContext.jsx';
+
+// Importar el componente ProtectedRoute desde su archivo
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // Importación de páginas
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Unauthorized from './pages/Unauthorized.jsx';
 import DashboardHome from './pages/page/DashboardHome';
 import  Productos  from './pages/page/Productos';
 import  Categorias  from './pages/page/Categorias';
@@ -37,29 +41,18 @@ import CrearCompraCredito from './pages/page/CrearCompraCredito';
 import DetalleCompraCredito from './pages/page/DetalleCompraCredito';
 import RegistrarPagoCompra from './pages/page/RegistrarPagoCompra';
 
-// Componente para proteger rutas
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-};
-
 const App = () => {
   return (
     <AuthProvider>
       <Router>
         <AnimatePresence mode="wait">
           <Routes>
+            {/* Rutas públicas */}
             <Route path="/" element={<Welcome />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+
+            {/* Rutas Protegidas (Dashboard y subrutas) */}
             <Route 
               path="/dashboard" 
               element={
@@ -106,8 +99,17 @@ const App = () => {
               <Route path="compras-credito/:id/pago" element={<RegistrarPagoCompra />} />
               
               {/* Ruta para configuración del negocio */}
-              <Route path="configuracion" element={<BusinessSettings />} />
+              <Route 
+                path="configuracion" 
+                element={
+                  <ProtectedRoute roles={['admin']}> 
+                    <BusinessSettings />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
+            
+            {/* Redirección para rutas no encontradas */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </AnimatePresence>

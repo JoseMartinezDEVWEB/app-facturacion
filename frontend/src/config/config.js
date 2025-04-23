@@ -8,49 +8,50 @@ export const API_URL = API_BASE_URL;
 export const API_ROUTES = {
   // Autenticación
   AUTH: {
-    LOGIN: '/api/login',
-    REGISTER: '/api/register-admin',
-    LOGOUT: '/api/logout',
-    VALIDATE: '/api/validate'
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register-admin',
+    LOGOUT: '/auth/logout',
+    VALIDATE: '/auth/validate',
+    USER_INFO: '/auth/users/info'
   },
   
   // Clientes
-  CLIENTES: '/api/clientes',
+  CLIENTES: '/clientes',
   
   // Productos
-  PRODUCTS: '/api/products',
-  CATEGORIES: '/api/categories',
+  PRODUCTS: '/products',
+  CATEGORIES: '/categories',
   
   // Facturas
-  INVOICES: '/api/newinvoices',
-  FACTURAS: '/api/facturas',
+  INVOICES: '/newinvoices',
+  FACTURAS: '/facturas',
   
   // Notas de crédito
-  CREDIT_NOTES: '/api/credit-notes',
+  CREDIT_NOTES: '/credit-notes',
   
   // Cotizaciones
-  QUOTES: '/api/quotes',
+  QUOTES: '/quotes',
   
   // Gastos
-  EXPENSES: '/api/expenses',
+  EXPENSES: '/expenses',
   
   // Reportes diarios
-  DAILY_REPORTS: '/api/daily-reports',
+  DAILY_REPORTS: '/daily-reports',
   
   // Dashboard
-  DASHBOARD: '/api/dashboard',
+  DASHBOARD: '/dashboard',
   
   // Proveedores
-  PROVIDERS: '/api/providers',
+  PROVIDERS: '/providers',
   
   // Órdenes de compra
-  PURCHASE_ORDERS: '/api/purchase-orders',
+  PURCHASE_ORDERS: '/purchase-orders',
   
   // Pagos a crédito
-  CREDIT_PAYMENTS: '/api/credit-payments',
+  CREDIT_PAYMENTS: '/credit-payments',
   
   // Retenciones
-  RETENTIONS: '/api/retentions'
+  RETENTIONS: '/retentions'
 };
 
 // Configuración de la aplicación
@@ -88,7 +89,8 @@ export const ERROR_MESSAGES = {
   FORBIDDEN: 'No tienes permisos para realizar esta acción.',
   NOT_FOUND: 'El recurso solicitado no existe.',
   VALIDATION: 'Por favor, verifica los datos ingresados.',
-  SERVER: 'Error en el servidor. Por favor, inténtalo más tarde.'
+  SERVER: 'Error en el servidor. Por favor, inténtalo más tarde.',
+  'Invalid credentials': 'Credenciales inválidas'
 };
 
 // Estados de documentos

@@ -1,6 +1,6 @@
 import express from 'express';
 import { createBusiness, getBusinesses, getBusinessInfo, saveBusinessInfo } from '../controllers/businessController.js';
-import { authMiddleware, checkRole } from '../middleware/authMiddleware.js';
+import { authMiddleware, checkRole } from '../middleware/authmiddleware.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -55,9 +55,13 @@ router.get('/',
 );
 
 // Nuevas rutas para la configuración del negocio
-router.get('/info', getBusinessInfo);
+router.get('/info', 
+    authMiddleware,
+    getBusinessInfo
+);
 
 router.post('/info', 
+    authMiddleware,
     upload.single('logo'), 
     saveBusinessInfo
 );

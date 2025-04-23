@@ -9,24 +9,27 @@ import {
   getMonthlyExpenses
 } from '../controllers/expenseController.js';
 
-// CAMBIAR: Importar del nuevo archivo consolidado
-import { protect, authorize } from '../middleware/auth.js';
+// Corregir importación de middleware
+import { authMiddleware, checkRole } from '../middleware/authmiddleware.js'; 
 
 const router = express.Router();
 
+// Aplicar autenticación a todas las rutas
+router.use(authMiddleware);
+
 // IMPORTANTE: La ruta /summary debe ir ANTES de /:id 
-router.get('/summary', protect, getExpenseSummary);
+router.get('/summary', getExpenseSummary);
 
 router.route('/')
-  .get(protect, getExpenses)
-  .post(protect, createExpense);
+  .get(getExpenses)
+  .post(createExpense);
 
 router.route('/:id')
-  .get(protect, getExpense)
-  .put(protect, updateExpense)
-  .delete(protect, deleteExpense);
+  .get(getExpense)
+  .put(updateExpense)
+  .delete(deleteExpense);
 
 router.route('/monthly')
-  .get(protect, getMonthlyExpenses);
+  .get(getMonthlyExpenses);
 
 export default router;

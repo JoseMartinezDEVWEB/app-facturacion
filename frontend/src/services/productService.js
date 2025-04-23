@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
 
-const API_URL = '/api/products';
+const API_URL = '/products';
 
 /**
  * Obtiene todos los productos con filtros opcionales
