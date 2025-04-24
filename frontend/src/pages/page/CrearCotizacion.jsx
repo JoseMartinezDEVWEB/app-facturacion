@@ -10,6 +10,8 @@ const CrearCotizacion = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState([]);
+  const [filteredClients, setFilteredClients] = useState([]);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,7 +23,7 @@ const CrearCotizacion = () => {
     validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 15 días
     items: [],
     subtotal: 0,
-    taxRate: 12,
+    taxRate: 18,
     taxAmount: 0,
     discountAmount: 0,
     total: 0,
@@ -38,12 +40,16 @@ const CrearCotizacion = () => {
         
         // Cargar clientes
         const clientsData = await getClients();
-        setClients(clientsData.data || clientsData);
+        const loadedClients = clientsData.data || clientsData;
+        setClients(loadedClients);
+        setFilteredClients(loadedClients);
         
         // Cargar productos
         const productsData = await getProducts();
-        setProducts(productsData.data || productsData);
-        setFilteredProducts(productsData.data || productsData);
+        // productsData may include { products: [], ... } or be array
+        const loadedProducts = productsData.products || productsData.data || productsData;
+        setProducts(loadedProducts);
+        setFilteredProducts(loadedProducts);
 
         setLoading(false);
       } catch (error) {
@@ -55,6 +61,22 @@ const CrearCotizacion = () => {
     
     fetchData();
   }, []);
+
+  // Filtrar clientes basado en término de búsqueda
+  useEffect(() => {
+    if (clientSearchTerm.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const lower = clientSearchTerm.toLowerCase();
+      setFilteredClients(
+        clients.filter(client =>
+          client.name.toLowerCase().includes(lower) ||
+          client.identification?.toLowerCase().includes(lower) ||
+          client.ruc?.toLowerCase().includes(lower)
+        )
+      );
+    }
+  }, [clientSearchTerm, clients]);
 
   // Filtrar productos basado en término de búsqueda
   useEffect(() => {
@@ -110,8 +132,8 @@ const CrearCotizacion = () => {
       product: product._id,
       productName: product.name,
       quantity: 1,
-      price: product.price,
-      subtotal: product.price
+      price: parseFloat(product.salePrice) || 0,
+      subtotal: parseFloat(product.salePrice) || 0
     };
     
     const newItems = [...cotizacion.items, newItem];
@@ -126,6 +148,9 @@ const CrearCotizacion = () => {
     }));
     
     setSelectedProduct('');
+    setSearchTerm('');
+    // Volver el foco al campo de búsqueda
+    document.getElementById('product-search').focus();
   };
 
   // Eliminar un producto de la cotización
@@ -255,6 +280,43 @@ const CrearCotizacion = () => {
     }
   };
 
+  // Agregar una función para manejar teclas en el campo de búsqueda
+  // Función para manejar la tecla Enter en la búsqueda de productos
+  const handleSearchKeyDown = (e) => {
+    // Si presiona Enter y hay productos filtrados
+    if (e.key === 'Enter' && filteredProducts.length > 0) {
+      e.preventDefault();
+      // Selecciona el primer producto de la lista
+      if (filteredProducts.length > 0) {
+        setSelectedProduct(filteredProducts[0]._id);
+        // Espera un poco para que se actualice el estado
+        setTimeout(() => {
+          handleAddProduct();
+        }, 50);
+      }
+    }
+  };
+
+  // Agregar código para el atajo de teclado global
+  // Atajo de teclado global para el campo de búsqueda de productos
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Alt+P para ir al campo de búsqueda de productos
+      if (e.altKey && e.key === 'p') {
+        e.preventDefault();
+        const searchInput = document.getElementById('product-search');
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -283,15 +345,22 @@ const CrearCotizacion = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block mb-2 font-medium">Cliente *</label>
+              <input
+                type="text"
+                placeholder="Buscar cliente..."
+                value={clientSearchTerm}
+                onChange={e => setClientSearchTerm(e.target.value)}
+                className="w-full border p-2 rounded mb-2"
+              />
               <select
                 name="cliente"
                 value={cotizacion.cliente}
-                onChange={handleChange}
+                onChange={e => { handleChange(e); setClientSearchTerm(''); }}
                 className="w-full border p-2 rounded"
                 required
               >
                 <option value="">Seleccione un cliente</option>
-                {clients.map(client => (
+                {filteredClients.map(client => (
                   <option key={client._id} value={client._id}>
                     {client.name} - {client.identification || client.ruc || 'Sin documento'}
                   </option>
@@ -330,9 +399,11 @@ const CrearCotizacion = () => {
               <div className="md:col-span-2">
                 <input
                   type="text"
-                  placeholder="Buscar producto..."
+                  id="product-search"
+                  placeholder="Buscar producto... (Alt+P)"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   className="w-full border p-2 rounded"
                 />
               </div>
@@ -345,7 +416,7 @@ const CrearCotizacion = () => {
                   <option value="">Seleccione un producto</option>
                   {filteredProducts.map(product => (
                     <option key={product._id} value={product._id}>
-                      {product.name} - ${product.price}
+                      {product.name} - ${parseFloat(product.salePrice) ? parseFloat(product.salePrice).toFixed(2) : '0.00'}
                     </option>
                   ))}
                 </select>
