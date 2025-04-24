@@ -93,8 +93,6 @@ const Drawer = ({ isOpen, onClose }) => {
           rol: role,
           isLoading: false
         });
-        
-        console.log('Información de usuario cargada correctamente:', response.data);
       } else {
         throw new Error('Datos de respuesta inválidos');
       }
@@ -166,59 +164,70 @@ const Drawer = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Drawer principal */}
+      {/* Drawer principal - móvil: ocupa toda la pantalla, lg: ocupa 20% */}
       <motion.div
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform ${
+        className={`fixed top-0 left-0 h-full w-full sm:w-80 md:w-72 lg:w-64 bg-white shadow-lg z-50 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto`}
+        } lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto flex flex-col`}
         initial={false}
       >
-        {/* Encabezado del usuario - Siempre visible incluso durante la carga */}
-        <div className="p-6 bg-blue-600 text-white">
-          <div className="flex items-center space-x-3">
-            <div 
-              className={`w-12 h-12 rounded-full bg-white text-blue-600 flex items-center justify-center text-xl font-bold ${
-                userInfo.isLoading ? 'animate-pulse' : ''
-              }`}
+        {/* Encabezado del usuario */}
+        <div className="px-4 py-5 bg-blue-600 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div 
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white text-blue-600 flex items-center justify-center text-xl font-bold flex-shrink-0 ${
+                  userInfo.isLoading ? 'animate-pulse' : ''
+                }`}
+              >
+                {initials}
+              </div>
+              <div className="overflow-hidden">
+                <h3 className="font-bold truncate text-sm sm:text-base">
+                  {userInfo.isLoading ? (
+                    <span className="inline-block w-24 h-5 bg-white bg-opacity-30 rounded animate-pulse"></span>
+                  ) : (
+                    displayName
+                  )}
+                </h3>
+                <p className="text-xs sm:text-sm truncate text-blue-200">
+                  {userInfo.isLoading ? (
+                    <span className="inline-block w-16 h-4 bg-white bg-opacity-20 rounded animate-pulse"></span>
+                  ) : (
+                    displayRole
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full text-white hover:bg-blue-700 lg:hidden"
+              aria-label="Close menu"
             >
-              {initials}
-            </div>
-            <div className="overflow-hidden">
-              <h3 className="font-bold truncate">
-                {userInfo.isLoading ? (
-                  <span className="inline-block w-24 h-5 bg-white bg-opacity-30 rounded animate-pulse"></span>
-                ) : (
-                  displayName
-                )}
-              </h3>
-              <p className="text-sm truncate text-blue-200">
-                {userInfo.isLoading ? (
-                  <span className="inline-block w-16 h-4 bg-white bg-opacity-20 rounded animate-pulse"></span>
-                ) : (
-                  displayRole
-                )}
-              </p>
-            </div>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Menú de navegación */}
-        <nav className="p-4">
+        {/* Menú de navegación - ScrollArea */}
+        <nav className="p-2 sm:p-4 flex-grow overflow-y-auto">
           {filteredMenu.map((item) => (
-            <div key={item.id} className="mb-2">
+            <div key={item.id} className="mb-1 sm:mb-2">
               {item.subItems ? (
                 <>
                   <button
                     onClick={() => handleMenuItemClick(item)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg transition-colors text-sm sm:text-base ${
                       isActive(item.id) || expandedMenu === item.id
                         ? 'bg-blue-50 text-blue-600'
                         : 'hover:bg-gray-100'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <span className="text-xl">{item.icon}</span>
-                      <span>{item.label}</span>
+                      <span className="text-lg sm:text-xl">{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
                     </div>
                     <span className={`transform transition-transform ${expandedMenu === item.id ? 'rotate-180' : ''}`}>
                       ▼
@@ -235,7 +244,7 @@ const Drawer = ({ isOpen, onClose }) => {
                       <Link
                         key={subItem.id}
                         to={subItem.id}
-                        className={`w-full flex items-center space-x-3 px-8 py-2 rounded-lg mb-1 transition-colors ${
+                        className={`w-full flex items-center space-x-3 px-6 sm:px-8 py-2 rounded-lg mb-1 transition-colors text-sm ${
                           isActive(subItem.id)
                             ? 'bg-blue-50 text-blue-600'
                             : 'hover:bg-gray-100'
@@ -247,7 +256,7 @@ const Drawer = ({ isOpen, onClose }) => {
                         }}
                       >
                         <span className="text-sm">{subItem.icon}</span>
-                        <span className="text-sm">{subItem.label}</span>
+                        <span className="truncate">{subItem.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -255,39 +264,29 @@ const Drawer = ({ isOpen, onClose }) => {
               ) : (
                 <Link
                   to={item.id}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg transition-colors text-sm sm:text-base ${
                     isActive(item.id)
                       ? 'bg-blue-50 text-blue-600'
                       : 'hover:bg-gray-100'
                   }`}
-                  onClick={() => handleMenuItemClick(item)}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      onClose();
+                    }
+                  }}
                 >
-                  <span className="text-xl">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <span className="text-lg sm:text-xl">{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
                 </Link>
               )}
             </div>
           ))}
         </nav>
 
-        {/* Pie de página con botón de cierre de sesión */}
-        <div className="sticky bottom-0 left-0 w-full p-4 border-t border-gray-200 bg-white">
-          <button 
-            onClick={() => {
-              // Limpiar datos de usuario y redirigir al login
-              localStorage.removeItem('userName');
-              localStorage.removeItem('userRole');
-              sessionStorage.removeItem('userName');
-              sessionStorage.removeItem('userRole');
-              document.cookie = 'userName=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-              document.cookie = 'userRole=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-              navigate('/login');
-            }}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <span>🚪</span>
-            <span>Cerrar Sesión</span>
-          </button>
+        {/* Footer con versión y copyright */}
+        <div className="p-4 bg-gray-50 border-t border-gray-200 text-xs text-center text-gray-500">
+          <p>App Facturación v1.0</p>
+          <p>© {new Date().getFullYear()} Todos los derechos reservados</p>
         </div>
       </motion.div>
     </>

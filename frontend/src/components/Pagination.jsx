@@ -41,48 +41,81 @@ const Pagination = ({
     return pages;
   };
   
+  // Versión simplificada para móviles
+  const getMobilePageNumbers = () => {
+    const pages = [];
+    // Mostrar solo página actual, anterior y siguiente
+    if (currentPage > 1) pages.push(currentPage - 1);
+    pages.push(currentPage);
+    if (currentPage < totalPages) pages.push(currentPage + 1);
+    return pages;
+  };
+  
   const pageNumbers = getPageNumbers();
+  const mobilePageNumbers = getMobilePageNumbers();
   
   return (
-    <div className="flex justify-center items-center mt-6 space-x-1">
+    <div className="flex justify-center items-center mt-4 sm:mt-6 px-2">
       {/* Botón Anterior */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className={`px-3 py-1 rounded-md ${
+        className={`px-2 sm:px-3 py-1 rounded-md ${
           currentPage === 1 
             ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
         }`}
+        aria-label="Página anterior"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
         </svg>
       </motion.button>
       
-      {/* Números de página */}
-      {pageNumbers.map((page, index) => (
-        <React.Fragment key={index}>
-          {page === '...' ? (
-            <span className="px-3 py-1 text-gray-500">...</span>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onPageChange(page)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === page 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {page}
-            </motion.button>
-          )}
-        </React.Fragment>
-      ))}
+      {/* Números de página para dispositivos móviles */}
+      <div className="flex sm:hidden space-x-1">
+        {mobilePageNumbers.map((page, index) => (
+          <motion.button
+            key={`mobile-${index}`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onPageChange(page)}
+            className={`min-w-[32px] px-2 py-1 text-sm rounded-md ${
+              currentPage === page 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {page}
+          </motion.button>
+        ))}
+      </div>
+      
+      {/* Números de página para tablet/desktop */}
+      <div className="hidden sm:flex space-x-1">
+        {pageNumbers.map((page, index) => (
+          <React.Fragment key={index}>
+            {page === '...' ? (
+              <span className="px-3 py-1 text-gray-500">...</span>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onPageChange(page)}
+                className={`min-w-[36px] px-3 py-1 rounded-md ${
+                  currentPage === page 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {page}
+              </motion.button>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
       
       {/* Botón Siguiente */}
       <motion.button
@@ -90,16 +123,22 @@ const Pagination = ({
         whileTap={{ scale: 0.95 }}
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={`px-3 py-1 rounded-md ${
+        className={`px-2 sm:px-3 py-1 rounded-md ${
           currentPage === totalPages 
             ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
         }`}
+        aria-label="Página siguiente"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
         </svg>
       </motion.button>
+      
+      {/* Indicador de página actual y total - visible solo en móvil */}
+      <div className="sm:hidden ml-2 text-xs text-gray-500">
+        {currentPage} / {totalPages}
+      </div>
     </div>
   );
 };
