@@ -20,7 +20,7 @@ const menuItems = [
   },
   { id: '/dashboard/categorias', label: 'Categorías', icon: '🏷️' },
   { id: '/dashboard/GestionGasto', label: 'Gestion de Gastos', icon: '💰' },
-  { id: '/dashboard/clientes', label: 'Usuarios', icon: '👥' },
+  { id: '/dashboard/clientes', label: 'Clientes', icon: '👥' },
   { id: '/dashboard/proveedores', label: 'Proveedores', icon: '🏭' },
   { id: '/dashboard/configuracion', label: 'Configuración', icon: '⚙️' }
 ];
@@ -146,6 +146,15 @@ const Drawer = ({ isOpen, onClose }) => {
   const displayRole = userInfo.rol || 'Invitado';
   const initials = getInitials(displayName);
 
+  // Filtrar menú según rol
+  const userRole = userInfo.rol;
+  const filteredMenu = userRole === 'cajero'
+    ? menuItems.filter(item =>
+        ['/dashboard','/dashboard/facturas','/dashboard/GestionGasto','/dashboard/clientes','/dashboard/proveedores','/dashboard/categorias']
+        .includes(item.id)
+      )
+    : menuItems;
+
   return (
     <>
       {/* Overlay para dispositivos móviles */}
@@ -195,7 +204,7 @@ const Drawer = ({ isOpen, onClose }) => {
 
         {/* Menú de navegación */}
         <nav className="p-4">
-          {menuItems.map((item) => (
+          {filteredMenu.map((item) => (
             <div key={item.id} className="mb-2">
               {item.subItems ? (
                 <>

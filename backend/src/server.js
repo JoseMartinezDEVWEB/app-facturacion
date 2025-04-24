@@ -20,6 +20,7 @@ import quoteRoutes from './routes/quoteRoutes.js';
 import retentionRoutes from './routes/retentionRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
 import creditPurchaseRoutes from './routes/creditPurchaseRoutes.js';
+import { auditMiddleware } from './middleware/auditMiddleware.js';
 
 import path from "path";
 import morgan from "morgan";
@@ -47,6 +48,8 @@ app.use(express.json());
 
 connectDB();
 
+// Auditoría: registrar cada petición y respuesta
+app.use(auditMiddleware);
 
 // Middleware para verificar las peticiones
 app.use((req, res, next) => {
