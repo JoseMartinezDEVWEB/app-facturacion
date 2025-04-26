@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Minus, Plus, Trash2, Scale, User, Search, X, UserPlus } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { clienteApi } from '../../config/apis';
+import VerifoneTerminal from '../payment/VerifoneTerminal';
+import CreditCardForm from '../payment/CreditCardForm';
 
 // Componente para buscar clientes con props para searchTerm y setSearchTerm
 const ClienteSearch = ({ onSelect, onCreateNew, searchTerm, setSearchTerm }) => {
@@ -348,8 +350,12 @@ const CarritoCompra = ({
   const [isCredit, setIsCredit] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
-  // Añadido estado para el término de búsqueda
+  // Estado para el término de búsqueda
   const [searchTerm, setSearchTerm] = useState('');
+  // Estado para mostrar formulario de tarjeta manual o terminal
+  const [cardPaymentMode, setCardPaymentMode] = useState('terminal'); // 'terminal' o 'manual'
+  // Estado para mostrar u ocultar el botón procesar pago - siempre true por defecto
+  const [showProcessButton, setShowProcessButton] = useState(true);
 
   // Efecto para limpiar estado cuando el carrito está vacío
   useEffect(() => {
@@ -406,10 +412,24 @@ const CarritoCompra = ({
 
   const handlePaymentDetailsChange = (e) => {
     const { name, value } = e.target;
-    setPaymentDetails(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Para campos numéricos, asegurar que sean valores numéricos válidos
+    if (name === 'transferAmount') {
+      // Validar que sea un número positivo
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue >= 0) {
+        setPaymentDetails(prev => ({
+          ...prev,
+          [name]: numValue
+        }));
+      }
+    } else {
+      // Para campos de texto, simplemente actualizar el valor
+      setPaymentDetails(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // Manejadores para la compra fiada
@@ -456,6 +476,68 @@ const CarritoCompra = ({
     }
     
     // Llamar a la función original de procesar pago
+    processPayment();
+  };
+
+  // Nuevo manejador para pago de terminal completado
+  const handleTerminalPaymentComplete = (result) => {
+    if (result && result.success) {
+      // Actualizar los detalles de pago con la información del terminal
+      setPaymentDetails({
+        ...paymentDetails,
+        cardNumber: `**** **** **** ${result.last4}`,
+        authorizationCode: result.referenceId,
+        cardType: result.cardBrand
+      });
+      
+      // Asegurar que el botón para procesar el pago esté siempre visible
+      setShowProcessButton(true);
+    }
+  };
+
+  // Manejar cancelación de pago con terminal
+  const handleTerminalCancel = () => {
+    // Asegurar que el botón para procesar el pago esté siempre visible
+    setShowProcessButton(true);
+  };
+
+  // Nuevo manejador para iniciar pago con tarjeta
+  const handleInitiateCardPayment = () => {
+    // Removed the code that hides the process button
+    // Always show the button regardless of payment mode
+    setShowProcessButton(true);
+  };
+
+  // Manejador para cambio de modo de pago con tarjeta
+  const handleCardPaymentModeChange = (mode) => {
+    setCardPaymentMode(mode);
+    if (mode === 'terminal') {
+      // Limpiar los detalles de pago previos
+      setPaymentDetails({
+        ...paymentDetails,
+        cardNumber: '',
+        authorizationCode: ''
+      });
+      
+      // Asegurar que el método de pago es credit_card para el backend
+      setPaymentMethod('credit_card');
+    }
+  };
+
+  // Manejador para formulario de tarjeta manual completado
+  const handleManualCardComplete = (cardData) => {
+    // Actualizar los detalles de pago con la información de la tarjeta
+    setPaymentDetails({
+      ...paymentDetails,
+      cardNumber: cardData.cardNumber,
+      cardholderName: cardData.cardholderName,
+      expiryDate: cardData.expiryDate
+    });
+    
+    // Asegurar que el método de pago es credit_card para el backend
+    setPaymentMethod('credit_card');
+    
+    // Procesar el pago
     processPayment();
   };
 
@@ -635,17 +717,28 @@ const CarritoCompra = ({
             </button>
             <button
               className={`p-2 border rounded flex items-center justify-center gap-2 ${
-                paymentMethod === 'card' ? 'bg-blue-50 border-blue-500' : ''
+                paymentMethod === 'card' || paymentMethod === 'credit_card' ? 'bg-blue-50 border-blue-500' : ''
               }`}
-              onClick={() => setPaymentMethod('card')}
+              onClick={() => {
+                setPaymentMethod('credit_card');
+                handleInitiateCardPayment();
+              }}
             >
               <span>Tarjeta</span>
             </button>
             <button
               className={`p-2 border rounded flex items-center justify-center gap-2 ${
-                paymentMethod === 'transfer' ? 'bg-blue-50 border-blue-500' : ''
+                paymentMethod === 'bank_transfer' ? 'bg-blue-50 border-blue-500' : ''
               }`}
-              onClick={() => setPaymentMethod('transfer')}
+              onClick={() => {
+                setPaymentMethod('bank_transfer');
+                // Inicializar los detalles de pago para transferencia
+                setPaymentDetails({
+                  ...paymentDetails,
+                  transactionId: '',
+                  transferAmount: totals.total
+                });
+              }}
             >
               <span>Transferencia</span>
             </button>
@@ -703,18 +796,74 @@ const CarritoCompra = ({
             </div>
           )}
 
-          {(paymentMethod === 'card' || paymentMethod === 'transfer') && (
+          {(paymentMethod === 'card' || paymentMethod === 'credit_card') && (
+            <div className="space-y-3">
+              <div className="border-b pb-3">
+                <div className="flex justify-between mb-3">
+                  <button
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      cardPaymentMode === 'terminal' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                    }`}
+                    onClick={() => handleCardPaymentModeChange('terminal')}
+                  >
+                    Terminal Verifone
+                  </button>
+                  <button
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      cardPaymentMode === 'manual' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                    }`}
+                    onClick={() => handleCardPaymentModeChange('manual')}
+                  >
+                    Tarjeta Manual
+                  </button>
+                </div>
+
+                {cardPaymentMode === 'terminal' ? (
+                  <VerifoneTerminal 
+                    amount={totals.total} 
+                    onComplete={handleTerminalPaymentComplete}
+                    onCancel={handleTerminalCancel}
+                  />
+                ) : (
+                  <CreditCardForm 
+                    amount={totals.total}
+                    onSubmit={handleManualCardComplete}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {paymentMethod === 'bank_transfer' && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  {paymentMethod === 'card' ? 'Número de Tarjeta' : 'Número de Referencia'}
+                  Número de Referencia
                 </label>
                 <input
                   type="text"
-                  name="cardNumber"
+                  name="transactionId"
                   className="w-full p-2 border rounded"
-                  value={paymentDetails.cardNumber}
+                  value={paymentDetails.transactionId || ''}
                   onChange={handlePaymentDetailsChange}
+                  placeholder="Número de referencia o confirmación"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Cantidad Pagada
+                </label>
+                <input
+                  type="number"
+                  name="transferAmount"
+                  min={totals.total}
+                  step="0.01"
+                  className="w-full p-2 border rounded"
+                  value={paymentDetails.transferAmount || totals.total}
+                  onChange={handlePaymentDetailsChange}
+                  placeholder={`Mínimo $${totals.total.toFixed(2)}`}
+                  required
                 />
               </div>
             </div>
@@ -722,6 +871,7 @@ const CarritoCompra = ({
         </div>
       )}
 
+      {/* Botón de procesar pago */}
       <button
         className={`w-full p-3 text-white rounded font-semibold mt-4 ${
           cart.length === 0 || loading || (isCredit && !selectedClient)

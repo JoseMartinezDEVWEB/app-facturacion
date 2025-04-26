@@ -360,6 +360,32 @@ const POSSystem = () => {
     };
   });
   
+  // Estado para guardar información del cajero
+  const [cashierInfo, setCashierInfo] = useState(() => {
+    // Intentar cargar la información del cajero desde localStorage
+    const savedCashier = localStorage.getItem('currentUser');
+    if (savedCashier) {
+      try {
+        return JSON.parse(savedCashier);
+      } catch (error) {
+        console.error('Error al cargar información del cajero:', error);
+      }
+    }
+    
+    // Si no hay información guardada, usar valores por defecto
+    return {
+      name: 'Cajero',
+      role: 'Empleado'
+    };
+  });
+  
+  // Función para establecer manualmente el nombre del cajero
+  const setCashierName = (name) => {
+    const updatedCashier = { ...cashierInfo, name };
+    setCashierInfo(updatedCashier);
+    localStorage.setItem('currentUser', JSON.stringify(updatedCashier));
+  };
+  
   // Estado para el modal de impresión
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState(null);
@@ -407,6 +433,27 @@ const POSSystem = () => {
         // En lugar de hacer una verificación que puede fallar, confiamos en el token existente
         setStatusMessage('Sesión activa');
         setTimeout(() => setStatusMessage(''), 2000);
+
+        // Guardar información del cajero actual en localStorage si no existe
+        if (!localStorage.getItem('currentUser')) {
+          try {
+            // Intentar obtener la información del usuario actual
+            const userResponse = await axios.get(`${API_URL}/auth/users/info`);
+            if (userResponse && userResponse.data) {
+              const userData = {
+                name: userResponse.data.username || userResponse.data.name || 'Cajero',
+                role: userResponse.data.role || 'Empleado'
+              };
+              localStorage.setItem('currentUser', JSON.stringify(userData));
+              console.log('Información del cajero guardada en localStorage:', userData);
+            }
+          } catch (error) {
+            console.error('Error al obtener información del cajero:', error);
+            // Si falla, crear un usuario genérico para mostrar en la factura
+            const defaultUser = { name: 'Cajero', role: 'Empleado' };
+            localStorage.setItem('currentUser', JSON.stringify(defaultUser));
+          }
+        }
       } else {
         console.warn('No se encontró token. Intentando estrategias alternativas...');
         
@@ -571,6 +618,20 @@ const POSSystem = () => {
       setManualQuantity(value);
       if (value !== '') {
         setQuantity(parseInt(value));
+      }
+    }
+  };
+
+  // Referencia para el botón de agregar al carrito
+  const addToCartButtonRef = useRef(null);
+
+  // Función para manejar el evento de teclado en el input de cantidad
+  const handleQuantityKeyDown = (e) => {
+    // Si se presiona Enter, mover el foco al botón de agregar al carrito
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevenir comportamiento predeterminado del Enter
+      if (addToCartButtonRef.current) {
+        addToCartButtonRef.current.focus();
       }
     }
   };
@@ -792,6 +853,7 @@ const POSSystem = () => {
 
     const isCredit = paymentMethod === 'credit';
     
+    // Validación específica por método de pago
     if (!paymentMethod && !isCredit) {
       setError('Seleccione un método de pago');
       return;
@@ -799,6 +861,12 @@ const POSSystem = () => {
     
     if (paymentMethod === 'cash' && cashAmount < total) {
       setError('El monto recibido es insuficiente');
+      return;
+    }
+    
+    // Verificar referencia para transferencias bancarias
+    if (paymentMethod === 'bank_transfer' && !paymentDetails.transactionId) {
+      setError('Ingrese el número de referencia de la transferencia');
       return;
     }
 
@@ -858,7 +926,8 @@ const POSSystem = () => {
           
           return itemData;
         }),
-        paymentMethod: paymentMethod || 'credit', // Si no hay método, es porque es crédito
+        // Convertir 'card' a 'credit_card' y 'bank_transfer' para coincidir con el modelo del backend
+        paymentMethod: paymentMethod === 'card' ? 'credit_card' : paymentMethod === 'bank_transfer' ? 'bank_transfer' : paymentMethod || 'credit',
         
         // IMPORTANTE: Configurar correctamente los detalles de pago según el método
         paymentDetails: isCredit 
@@ -872,7 +941,18 @@ const POSSystem = () => {
                 received: cashAmount,
                 change: change
               } 
-            : paymentDetails, // Otros métodos de pago
+            : paymentMethod === 'bank_transfer'
+              ? { // Detalles para transferencia bancaria
+                  transactionId: paymentDetails.cardNumber || '',  // Usar el número de referencia
+                  amount: paymentDetails.transferAmount || total
+                }
+              : paymentMethod === 'credit_card'
+                ? { // Detalles para tarjeta de crédito
+                    cardLastFour: paymentDetails.cardNumber?.slice(-4) || '0000',
+                    authorizationCode: paymentDetails.authorizationCode || '',
+                    transactionId: paymentDetails.transactionId || ''
+                  }
+                : paymentDetails, // Otros métodos de pago
             
         subtotal,
         taxAmount: tax,
@@ -933,7 +1013,15 @@ const POSSystem = () => {
       if (err.response) {
         console.error('Detalles del error del servidor:', {
           status: err.response.status,
-          data: err.response.data
+          data: err.response.data,
+          headers: err.response.headers
+        });
+        
+        // Log de datos enviados para diagnóstico
+        console.error('Datos enviados al servidor:', {
+          paymentMethod: invoiceData.paymentMethod,
+          paymentDetails: invoiceData.paymentDetails,
+          isCredit: invoiceData.isCredit
         });
         
         if (err.response.status === 401) {
@@ -1080,6 +1168,7 @@ const POSSystem = () => {
                     className="w-16 text-center border rounded p-1"
                     value={manualQuantity || quantity}
                     onChange={handleManualQuantityChange}
+                    onKeyDown={handleQuantityKeyDown}
                     placeholder="Cant."
                   />
                   <button
@@ -1090,6 +1179,7 @@ const POSSystem = () => {
                   </button>
                 </div>
                 <button
+                  ref={addToCartButtonRef}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   onClick={() => addToCart(currentProduct, parseInt(manualQuantity || quantity))}
                 >
@@ -1129,7 +1219,7 @@ const POSSystem = () => {
             totals={currentInvoice?.totals || calculateTotals()}
             paymentMethod={currentInvoice?.paymentMethod || paymentMethod}
             businessInfo={businessInfo}
-            currentUser={localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : null}
+            currentUser={cashierInfo || localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : { name: localStorage.getItem('userName') || 'Cajero' }}
             invoiceNumber={currentInvoice?.receiptNumber || ''}
             isCredit={currentInvoice?.isCredit || paymentMethod === 'credit'}
             clientName={currentInvoice?.clientName || (paymentMethod === 'credit' ? paymentDetails.clientName : null)}

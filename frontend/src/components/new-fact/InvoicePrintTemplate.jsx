@@ -59,7 +59,7 @@ const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod
                 </div>
                 <div className="flex justify-between text-sm">
                     {businessInfo.showCashier !== false && (
-                        <span>Cajero: {currentUser?.name || 'No identificado'}</span>
+                        <span>Cajero: {currentUser?.name || localStorage.getItem('userName') || localStorage.getItem('currentUserName') || sessionStorage.getItem('userName') || 'No identificado'}</span>
                     )}
                     <span>Tipo de Compra: {invoiceNumber ? 'Factura' : 'Desconocido'}</span>
                 </div>
@@ -127,7 +127,8 @@ const InvoicePrintTemplate = forwardRef(({ cart, customer, totals, paymentMethod
                         <span>{
                             isCredit ? 'Crédito (Fiado)' :
                             paymentMethod === 'cash' ? 'Efectivo' :
-                            paymentMethod === 'card' ? 'Tarjeta' :
+                            paymentMethod === 'card' || paymentMethod === 'credit_card' ? 'Tarjeta' :
+                            paymentMethod === 'bank_transfer' ? 'Transferencia' :
                             'Transferencia'
                         }</span>
                     </div>
