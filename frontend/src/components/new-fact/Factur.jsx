@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, CreditCard, DollarSign, ArrowRightLeft, Plus, Minus, X, AlertCircle, Scale } from 'lucide-react';
 import axios from 'axios';
-import { useReactToPrint } from 'react-to-print';
 import InvoicePrintTemplate from './InvoicePrintTemplate';
 import CarritoCompra from './CarritoCompra';
 import PrintConfirmationModal from './PrintConfirmationModal';
@@ -14,6 +13,7 @@ import { invoiceApi } from '../../config/apis';
 import BuscarProduct from './BuscarProduct';
 import InvoicePreviewModal from './InvoicePreviewModal';
 import BusinessInfoSettings from './BusinessInfoSettings';
+import printJS from 'print-js';
 
 const API_URL = 'http://localhost:4500/api';
 
@@ -389,39 +389,287 @@ const POSSystem = () => {
   // Estado para el modal de impresión
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState(null);
-  const [printAttemptStatus, setPrintAttemptStatus] = useState('idle');
-  
-  const printRef = useRef();
   const { fetchProductByBarcode, fetchProductByName, productError } = useProducts();
+  
+  // Nueva función de impresión usando printJS
+  const handlePrint = () => {
+    if (!currentInvoice) {
+      setError('No hay datos de factura para imprimir');
+      return;
+    }
 
-   // Manejadores para los nuevos modales
-  const handleOpenSettings = (type = 'business') => {
-    if (type === 'business') {
-      setSettingsModalOpen(true);
-    } else if (type === 'print') {
-      setConfigModalOpen(true);
+    try {
+      // Crear un div temporal que contendrá el contenido a imprimir
+      const printContainer = document.createElement('div');
+      printContainer.id = 'print-invoice-container';
+      printContainer.style.display = 'none';
+      document.body.appendChild(printContainer);
+
+      // Preparar los datos para la plantilla de impresión
+      const printData = {
+        invoice: {
+          invoiceNumber: currentInvoice.receiptNumber,
+          date: new Date(),
+          subtotal: currentInvoice.totals.subtotal,
+          taxAmount: currentInvoice.totals.tax,
+          total: currentInvoice.totals.total,
+          cashReceived: currentInvoice.actualCashReceived || 0,
+          taxRate: businessInfo.taxRate || 18
+        },
+        company: {
+          name: businessInfo.name,
+          address: businessInfo.address,
+          rif: businessInfo.rnc,
+          phone: businessInfo.phone,
+          email: businessInfo.email || '',
+          slogan: businessInfo.slogan
+        },
+        client: {
+          name: currentInvoice.isCredit ? currentInvoice.clientName : (currentInvoice.customer?.name || 'Cliente General'),
+          identification: currentInvoice.customer?.identification || '',
+          address: currentInvoice.customer?.address || '',
+          phone: currentInvoice.customer?.phone || '',
+          email: currentInvoice.customer?.email || ''
+        },
+        items: currentInvoice.items.map(item => ({
+          quantity: item.quantity,
+          name: item.name,
+          description: item.description || item.name,
+          price: item.price || item.salePrice,
+          unitPrice: item.salePrice,
+          details: item.weightInfo ? `${item.weightInfo.value} ${item.weightInfo.unit}` : ''
+        })),
+        paymentMethod: currentInvoice.paymentMethod,
+        observations: businessInfo.additionalComment || ''
+      };
+
+      // Renderizar el componente en el contenedor
+      const printContent = document.createElement('div');
+      printContent.innerHTML = `
+        <div class="print-container">
+          <div class="invoice-header">
+            <div class="company-info">
+              <h1>${printData.company.name}</h1>
+              <p>${printData.company.address}</p>
+              <p>RIF: ${printData.company.rif}</p>
+              <p>Teléfono: ${printData.company.phone}</p>
+            </div>
+          </div>
+
+          <div class="invoice-title">
+            <h2>Factura</h2>
+            <p class="invoice-number">N°: ${printData.invoice.invoiceNumber}</p>
+            <p class="invoice-date">
+              Fecha: ${new Date().toLocaleDateString()} - 
+              Hora: ${new Date().toLocaleTimeString()}
+            </p>
+          </div>
+
+          <div class="client-info">
+            <h3>Cliente</h3>
+            <p><strong>Nombre:</strong> ${printData.client.name}</p>
+            ${printData.client.identification ? `<p><strong>RIF/CI:</strong> ${printData.client.identification}</p>` : ''}
+            ${printData.client.address ? `<p><strong>Dirección:</strong> ${printData.client.address}</p>` : ''}
+            ${printData.client.phone ? `<p><strong>Teléfono:</strong> ${printData.client.phone}</p>` : ''}
+          </div>
+
+          <div class="invoice-items">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cant</th>
+                  <th>Descripción</th>
+                  <th>Precio</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${printData.items.map(item => `
+                  <tr>
+                    <td>${item.quantity}</td>
+                    <td>
+                      <div class="item-description">
+                        ${item.description}
+                        ${item.details ? `<small>${item.details}</small>` : ''}
+                      </div>
+                    </td>
+                    <td>${(item.unitPrice || item.price).toFixed(2)}</td>
+                    <td>${((item.quantity || 1) * (item.unitPrice || item.price)).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="invoice-summary">
+            <div class="summary-item">
+              <span>Subtotal:</span>
+              <span>${printData.invoice.subtotal.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+              <span>IVA (${printData.invoice.taxRate}%):</span>
+              <span>${printData.invoice.taxAmount.toFixed(2)}</span>
+            </div>
+            <div class="summary-item total">
+              <span>Total:</span>
+              <span>${printData.invoice.total.toFixed(2)}</span>
+            </div>
+            
+            ${printData.paymentMethod === 'cash' && printData.invoice.cashReceived > 0 ? `
+              <div class="summary-item">
+                <span>Efectivo recibido:</span>
+                <span>${printData.invoice.cashReceived.toFixed(2)}</span>
+              </div>
+              <div class="summary-item">
+                <span>Cambio:</span>
+                <span>${(printData.invoice.cashReceived - printData.invoice.total).toFixed(2)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="payment-method">
+            <strong>Método de pago:</strong> ${
+              printData.paymentMethod === 'cash' ? 'Efectivo' :
+              printData.paymentMethod === 'credit_card' ? 'Tarjeta de Crédito' :
+              printData.paymentMethod === 'bank_transfer' ? 'Transferencia Bancaria' :
+              printData.paymentMethod === 'credit' ? 'Crédito' :
+              printData.paymentMethod
+            }
+          </div>
+
+          ${printData.observations ? `
+            <div class="invoice-notes">
+              <h4>Observaciones:</h4>
+              <p>${printData.observations}</p>
+            </div>
+          ` : ''}
+
+          <div class="invoice-footer">
+            <p>Gracias por su compra</p>
+            ${printData.company.slogan ? `<p>${printData.company.slogan}</p>` : ''}
+            <p>Cajero: ${cashierInfo.name}</p>
+          </div>
+        </div>
+      `;
+      
+      printContainer.appendChild(printContent);
+
+      // Usar printJS para imprimir el contenido
+      printJS({
+        printable: 'print-invoice-container',
+        type: 'html',
+        documentTitle: `Factura-${printData.invoice.invoiceNumber}`,
+        maxWidth: 800,
+        onPrintDialogClose: () => {
+          // Limpiar después de imprimir
+          document.body.removeChild(printContainer);
+          
+          // Reset relevant states after successful print
+          setPrintModalOpen(false);
+          setCart([]);
+          setPaymentMethod('');
+          setCashReceived('');
+          setCurrentProduct(null);
+          setQuantity(1);
+          setManualQuantity('');
+          setSearchTerm('');
+          setStatusMessage('Factura impresa exitosamente');
+          setTimeout(() => setStatusMessage(''), 2000);
+        },
+        css: `
+          .print-container {
+            font-family: Arial, sans-serif;
+            max-width: 80mm;
+            padding: 5mm;
+          }
+          .invoice-header {
+            text-align: center;
+            margin-bottom: 10px;
+          }
+          .company-info h1 {
+            font-size: 16px;
+            margin: 0;
+          }
+          .company-info p {
+            font-size: 12px;
+            margin: 2px 0;
+          }
+          .invoice-title {
+            text-align: center;
+            margin: 10px 0;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 5px;
+          }
+          .invoice-number, .invoice-date {
+            font-size: 12px;
+            margin: 2px 0;
+          }
+          .client-info {
+            margin: 10px 0;
+            font-size: 12px;
+          }
+          .client-info h3 {
+            font-size: 14px;
+            margin: 5px 0;
+          }
+          .invoice-items table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+          .invoice-items th {
+            border-bottom: 1px solid #000;
+            text-align: left;
+            padding: 3px;
+          }
+          .invoice-items td {
+            padding: 3px;
+            border-bottom: 1px dashed #ccc;
+          }
+          .item-description small {
+            display: block;
+            color: #666;
+          }
+          .invoice-summary {
+            margin: 10px 0;
+            font-size: 12px;
+          }
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+          }
+          .total {
+            font-weight: bold;
+            border-top: 1px solid #000;
+            padding-top: 3px;
+          }
+          .payment-method {
+            margin: 10px 0;
+            font-size: 12px;
+          }
+          .invoice-notes {
+            margin: 10px 0;
+            font-size: 12px;
+          }
+          .invoice-notes h4 {
+            margin: 5px 0;
+          }
+          .invoice-footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 12px;
+            border-top: 1px dashed #000;
+            padding-top: 5px;
+          }
+        `
+      });
+    } catch (error) {
+      console.error('Error al imprimir:', error);
+      setError(`Error al imprimir: ${error.message}`);
     }
   };
-  
-  const handleSaveSettings = (newSettings) => {
-    // Determinar qué tipo de configuración se está guardando
-    if (newSettings.hasOwnProperty('paperSize')) {
-      // Es configuración de impresión
-      setPrintConfig(newSettings);
-    } else if (newSettings.hasOwnProperty('name')) {
-      // Es información del negocio
-      setBusinessInfo(newSettings);
-    }
-    
-    // En caso de configuraciones avanzadas, manejarlas aquí
-  };
-  
-  const handleViewInvoice = () => {
-    setPreviewModalOpen(true);
-  };
 
-  
-  
   // Efecto inicial para verificar estado de auth y preparar sesión
   useEffect(() => {
     const verifyTokenAndPrepare = async () => {
@@ -498,56 +746,6 @@ const POSSystem = () => {
       setError(productError);
     }
   }, [productError]);
-
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    onBeforeGetContent: () => {
-      setPrintAttemptStatus('preparing');
-      return new Promise(resolve => {
-        setTimeout(resolve, 500);
-      });
-    },
-    onPrintError: (error) => {
-      console.error('Error durante la impresión:', error);
-      setPrintAttemptStatus('error');
-      setError('Error al imprimir. Por favor, verifique su impresora.');
-    },
-    onAfterPrint: () => {
-      setPrintAttemptStatus('success');
-      setStatusMessage('Factura impresa exitosamente');
-      setTimeout(() => {
-        // Cerrar el modal y limpiar todo
-        setPrintModalOpen(false);
-        setPrintAttemptStatus('idle');
-        
-        // Limpiar el carrito y los estados relacionados
-        setCart([]);
-        setPaymentMethod('');
-        setCashReceived('');
-        setCurrentProduct(null);
-        setQuantity(1);
-        setManualQuantity('');
-        setSearchTerm('');
-        
-        // También resetear la selección de cliente fiado
-        if (setSelectedClient) {
-          setSelectedClient(null);
-        }
-        
-        // Resetear los detalles de pago
-        setPaymentDetails({
-          cardNumber: '',
-          authorizationCode: '',
-          transactionId: '',
-          clientId: null,
-          clientName: null
-        });
-        
-        // Resetear el estado de la factura actual
-        setCurrentInvoice(null);
-      }, 1500);
-    }
-  });
 
   const handleSearch = useCallback(async (event) => {
     if (event.key === 'Enter' && searchTerm) {
@@ -710,11 +908,6 @@ const POSSystem = () => {
   const removeFromCart = useCallback((productId) => {
     setCart(prevCart => prevCart.filter(item => item._id !== productId));
   }, []);
-
-  // Función para confirmar impresión desde el modal
-  const confirmPrint = () => {
-    handlePrint();
-  };
 
   // Función para manejar la impresión con datos de la factura guardada
   const handlePrintInvoice = async (invoiceData) => {
@@ -977,32 +1170,29 @@ const POSSystem = () => {
           setStatusMessage('Venta procesada exitosamente');
         }
         
-        // Prepare receipt number for printing
-        const receiptNumber = response.receiptNumber || `FAC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-????`;
+        // Generar número de recibo
+        const receiptNumber = `FAC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${(response._id || response.id || '').substring(0, 4)}`;
         
-        // Set current invoice for printing - CORREGIR VALORES PARA COMPRAS FIADAS
+        // Armar datos completos de la factura para impresión
         setCurrentInvoice({
-          ...response,
+          // Detalles del cliente e ítems
+          customer: invoiceData.customer,
+          items: invoiceData.items,
+          // Totales calculados
+          totals: { subtotal, tax, total, change },
+          paymentMethod: invoiceData.paymentMethod || paymentMethod,
+          // Número de factura
           receiptNumber,
+          // Indicador de crédito
           isCredit: invoiceData.isCredit,
+          // Nombre de cliente en compras fiadas
           clientName: invoiceData.isCredit ? paymentDetails.clientName : 'Cliente General',
-          // Asegurar que no hay valores de efectivo para compras fiadas
-          paymentDetails: invoiceData.paymentDetails,
-          // Forzar limpiar valores de efectivo en compras fiadas
-          cashReceived: invoiceData.isCredit ? 0 : cashAmount
+          // Efectivo recibido si aplica
+          actualCashReceived: invoiceData.isCredit ? 0 : cashAmount
         });
         
-        // Open print modal
+        // Open confirmation modal for print
         setPrintModalOpen(true);
-        
-        // Cleanup cart and state after successful transaction
-        setCart([]);
-        setPaymentMethod('');
-        setCashReceived('');
-        setCurrentProduct(null);
-        setQuantity(1);
-        setManualQuantity('');
-        setSearchTerm('');
       } else {
         setError('Error: No se recibió confirmación completa de la factura');
         console.error('Respuesta incompleta del servidor:', response);
@@ -1080,8 +1270,46 @@ const POSSystem = () => {
     transactionId: ''
   });
 
+  const handleViewInvoice = () => {
+    setPreviewModalOpen(true);
+  };
+
+  // Manejador para abrir modales de configuración de impresión o negocio
+  const handleOpenSettings = (type = 'business') => {
+    if (type === 'business') {
+      setSettingsModalOpen(true);
+    } else if (type === 'print') {
+      setConfigModalOpen(true);
+    }
+  };
+
+  // Add the missing handleSaveSettings function
+  const handleSaveSettings = (newBusinessInfo) => {
+    // Update the state with the new business info
+    setBusinessInfo(newBusinessInfo);
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem('business_invoice_config', JSON.stringify(newBusinessInfo));
+      setStatusMessage('Configuración del negocio guardada correctamente');
+      setTimeout(() => setStatusMessage(''), 2000);
+    } catch (error) {
+      console.error('Error al guardar la configuración del negocio:', error);
+      setError('No se pudo guardar la configuración. Intente nuevamente.');
+    }
+    
+    // Close the settings modal
+    setSettingsModalOpen(false);
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-4 p-4 max-w-6xl mx-auto">
+      <style>{`@media print {
+        body * { visibility: hidden !important; }
+        #print-invoice-container, #print-invoice-container * { visibility: visible !important; }
+        #print-invoice-container { position: absolute; top: 0; left: 0; width: 100%; }
+      }`}</style>
+
       {/* Mensajes de estado/error */}
       {error && (
         <div className="fixed top-4 right-4 max-w-sm p-4 bg-red-100 border border-red-300 rounded shadow-lg z-50 flex items-start gap-2">
@@ -1210,42 +1438,17 @@ const POSSystem = () => {
           processPayment={processPayment}
         />
 
-        {/* Componente de impresión oculto */}
-        <div style={{ display: "none" }}>
-         <InvoicePrintTemplate
-            ref={printRef}
-            cart={cart}
-            customer={customer}
-            totals={currentInvoice?.totals || calculateTotals()}
-            paymentMethod={currentInvoice?.paymentMethod || paymentMethod}
-            businessInfo={businessInfo}
-            currentUser={cashierInfo || localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')) : { name: localStorage.getItem('userName') || 'Cajero' }}
-            invoiceNumber={currentInvoice?.receiptNumber || ''}
-            isCredit={currentInvoice?.isCredit || paymentMethod === 'credit'}
-            clientName={currentInvoice?.clientName || (paymentMethod === 'credit' ? paymentDetails.clientName : null)}
-            cashReceivedValue={parseFloat(cashReceived) || 0}
-          />
-        </div>
-        
         {/* Modal de confirmación de impresión */}
         <PrintConfirmationModal
-          isOpen={printModalOpen} 
+          isOpen={printModalOpen}
           onClose={handleCloseModal}
-          onConfirm={confirmPrint}
+          onConfirm={handlePrint}
+          onViewInvoice={handleViewInvoice}
+          onConfigInvoice={() => handleOpenSettings('business')}
           invoiceNumber={currentInvoice?.receiptNumber || ''}
         />
       </div>
 
-      {/* Modal actualizado con nuevas propiedades */}
-      <PrintConfirmationModal
-        isOpen={printModalOpen} 
-        onClose={handleCloseModal}
-        onConfirm={confirmPrint}
-        onViewInvoice={handleViewInvoice}
-        onConfigInvoice={() => handleOpenSettings('business')}
-        invoiceNumber={currentInvoice?.receiptNumber || ''}
-      />
-      
       {/* Modal de configuración */}
       <InvoicePreviewModal
         isOpen={configModalOpen}
@@ -1261,7 +1464,7 @@ const POSSystem = () => {
       <InvoicePreviewModal
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
-        onPrint={confirmPrint}
+        onPrint={handlePrint}
         invoiceData={currentInvoice}
         businessInfo={businessInfo}
       />
