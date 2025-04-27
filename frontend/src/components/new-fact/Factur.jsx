@@ -15,7 +15,7 @@ import BuscarProduct from './BuscarProduct';
 import InvoicePreviewModal from './InvoicePreviewModal';
 import BusinessInfoSettings from './BusinessInfoSettings';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'http://localhost:4500/api';
 
 // Ajustar configuración de axios según las capacidades del backend
 // Si el backend no soporta credenciales, no debemos habilitarlas

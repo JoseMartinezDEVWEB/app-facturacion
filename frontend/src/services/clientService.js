@@ -1,7 +1,8 @@
-import axios from 'axios';
-import { getAuthConfig } from './authService';
+import api from '../config/apis';
+import { API_ROUTES } from '../config/config';
 
-const API_URL = '/clientes';
+// Use full backend URL for clients
+const API_URL = API_ROUTES.CLIENTES;
 
 /**
  * Obtiene todos los clientes con filtros opcionales
@@ -11,14 +12,12 @@ const API_URL = '/clientes';
 export const getClients = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        params.append(key, filters[key]);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value);
       }
     });
-    
-    const response = await axios.get(`${API_URL}?${params.toString()}`, getAuthConfig());
+    const response = await api.get(`${API_URL}?${params.toString()}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener los clientes' };
@@ -32,7 +31,7 @@ export const getClients = async (filters = {}) => {
  */
 export const getClientById = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el cliente' };
@@ -46,7 +45,7 @@ export const getClientById = async (id) => {
  */
 export const createClient = async (clientData) => {
   try {
-    const response = await axios.post(API_URL, clientData, getAuthConfig());
+    const response = await api.post(API_URL, clientData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al crear el cliente' };
@@ -61,7 +60,7 @@ export const createClient = async (clientData) => {
  */
 export const updateClient = async (id, clientData) => {
   try {
-    const response = await axios.put(`${API_URL}/${id}`, clientData, getAuthConfig());
+    const response = await api.put(`${API_URL}/${id}`, clientData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al actualizar el cliente' };
@@ -75,7 +74,7 @@ export const updateClient = async (id, clientData) => {
  */
 export const deleteClient = async (id) => {
   try {
-    const response = await axios.delete(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.delete(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al eliminar el cliente' };
@@ -89,7 +88,7 @@ export const deleteClient = async (id) => {
  */
 export const getClientPurchaseHistory = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}/purchases`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}/purchases`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el historial de compras' };
@@ -103,7 +102,7 @@ export const getClientPurchaseHistory = async (id) => {
  */
 export const getClientAccountStatus = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}/account-status`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}/account-status`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el estado de cuenta' };

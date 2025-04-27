@@ -135,25 +135,47 @@ app.use('/api/retentions', retentionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/credit-purchases', creditPurchaseRoutes);
 
+// Endpoint para obtener impresoras (simulado)
+app.get('/api/printers', (req, res) => {
+  // En un entorno real, esto se conectaría al sistema operativo o a un servicio de impresión
+  const printers = [
+    { name: 'Impresora Predeterminada', isDefault: true },
+    { name: 'Impresora Térmica' },
+    { name: 'Impresora PDF' }
+  ];
+  
+  res.json(printers);
+});
 
-const port = process.env.PORT || 4000;
+// Forzar puerto 4500 para solucionar conflicto con puerto 4000
+const port = 4500;
 
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
-})
- 
+// Manejadores globales para excepciones y promesas no manejadas
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 // Carpeta para archivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Middlewares de manejo de errores
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({
-        status: 'error',
-        message: 'Error interno del servidor',
-        error: process.env.NODE_ENV === 'development' ? err.message : {}
-    });
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    status: 'error',
+    message: 'Error interno del servidor',
+    error: process.env.NODE_ENV === 'development' ? err.message : {}
+  });
 });
 
-
+// Iniciar servidor en puerto fijo
 app.listen(port, () => console.log(`Server running on port ${port}`));

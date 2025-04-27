@@ -1,8 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
+import { useLoading } from '../context/LoadingContext';
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const { showInitialLoader } = useLoading();
+
+  useEffect(() => {
+    // Mostrar la animación de carga inicial de 5 segundos
+    showInitialLoader('Iniciando sistema de facturación...');
+  }, [showInitialLoader]);
 
   return (
     <motion.div 

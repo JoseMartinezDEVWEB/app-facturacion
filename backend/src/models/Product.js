@@ -225,8 +225,6 @@ productSchema.methods.markAsPaid = function() {
 // Índices para búsqueda eficiente
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1 });
-productSchema.index({ barcode: 1 });
-productSchema.index({ qrCode: 1 });
 productSchema.index({ provider: 1 });
 productSchema.index({ 'creditPurchase.isPaid': 1, 'creditPurchase.dueDate': 1 });
 

@@ -1,5 +1,5 @@
 // Base URL para la API
-export const API_BASE_URL = 'http://localhost:4000/api';
+export const API_BASE_URL = 'http://localhost:4500/api';
 
 // URL completa para uso directo en componentes
 export const API_URL = API_BASE_URL;

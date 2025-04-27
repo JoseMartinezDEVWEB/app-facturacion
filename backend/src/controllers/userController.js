@@ -1,9 +1,15 @@
 import { User } from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
+// Función de utilidad para añadir un tiempo de espera artificial (para simular cargas)
+const addDelay = (ms = 2000) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Crear un nuevo usuario
 export const createUser = async (req, res) => {
     try {
+      // Agregar retraso artificial de 3 segundos
+      await addDelay(3000);
+
       const { username, email, password, role } = req.body;
   
       // Check if user already exists
@@ -54,6 +60,9 @@ export const createUser = async (req, res) => {
   
   export const getUsers = async (req, res) => {
     try {
+      // Agregar retraso artificial de 3 segundos
+      await addDelay(3000);
+
       const users = await User.find()
         .select('-password')
         .sort({ createdAt: -1 });
@@ -67,6 +76,9 @@ export const createUser = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
+      // Agregar retraso artificial de 3 segundos
+      await addDelay(3000);
+
       const { email, password } = req.body;
   
       const user = await User.findOne({ email });
@@ -102,6 +114,9 @@ export const login = async (req, res) => {
   // Nuevo método para crear el admin inicial
 export const createInitialAdmin = async (req, res) => {
     try {
+      // Agregar retraso artificial de 3 segundos
+      await addDelay(3000);
+
       // Verificar si ya existe un admin
       const adminExists = await User.findOne({ role: 'admin' });
       if (adminExists) {
@@ -139,6 +154,9 @@ export const createInitialAdmin = async (req, res) => {
 
   export const getUserInfo = async (req, res) => {
     try {
+        // Agregar retraso artificial de 3 segundos
+        await addDelay(3000);
+
         // El middleware authMiddleware ya adjuntó el usuario (sin password)
         // req.user contiene el objeto User completo
         const user = req.user;
