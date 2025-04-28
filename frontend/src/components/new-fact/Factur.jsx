@@ -391,7 +391,7 @@ const POSSystem = () => {
   const [currentInvoice, setCurrentInvoice] = useState(null);
   const { fetchProductByBarcode, fetchProductByName, productError } = useProducts();
   
-  // Nueva función de impresión usando printJS
+  // Función de impresión mejorada usando window.print() nativo
   const handlePrint = () => {
     if (!currentInvoice) {
       setError('No hay datos de factura para imprimir');
@@ -402,7 +402,13 @@ const POSSystem = () => {
       // Crear un div temporal que contendrá el contenido a imprimir
       const printContainer = document.createElement('div');
       printContainer.id = 'print-invoice-container';
-      printContainer.style.display = 'none';
+      printContainer.style.position = 'fixed';
+      printContainer.style.top = '0';
+      printContainer.style.left = '0';
+      printContainer.style.width = '100%';
+      printContainer.style.height = '100%';
+      printContainer.style.zIndex = '-9999';
+      printContainer.style.backgroundColor = 'white';
       document.body.appendChild(printContainer);
 
       // Preparar los datos para la plantilla de impresión
@@ -443,15 +449,132 @@ const POSSystem = () => {
         observations: businessInfo.additionalComment || ''
       };
 
+      // Crear estilos para la impresión
+      const styleElement = document.createElement('style');
+      styleElement.textContent = `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-invoice-container, #print-invoice-container * {
+            visibility: visible;
+          }
+          #print-invoice-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+        .print-container {
+          font-family: Arial, sans-serif;
+          width: 80mm;
+          margin: 0 auto;
+          padding: 5mm;
+          font-size: 14px;
+        }
+        .invoice-header {
+          text-align: center;
+          margin-bottom: 10px;
+        }
+        .company-info h1 {
+          font-size: 20px;
+          margin: 0;
+          font-weight: bold;
+        }
+        .company-info p {
+          font-size: 14px;
+          margin: 2px 0;
+        }
+        .invoice-title {
+          text-align: center;
+          margin: 10px 0;
+          border-bottom: 1px dashed #000;
+          padding-bottom: 5px;
+        }
+        .invoice-title h2 {
+          font-size: 18px;
+          font-weight: bold;
+          margin: 5px 0;
+        }
+        .invoice-number, .invoice-date {
+          font-size: 14px;
+          margin: 2px 0;
+        }
+        .client-info {
+          margin: 10px 0;
+          font-size: 14px;
+        }
+        .client-info h3 {
+          font-size: 16px;
+          margin: 5px 0;
+          font-weight: bold;
+        }
+        .invoice-items table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+        .invoice-items th {
+          border-bottom: 1px solid #000;
+          text-align: left;
+          padding: 3px;
+          font-weight: bold;
+        }
+        .invoice-items td {
+          padding: 3px;
+          border-bottom: 1px dashed #ccc;
+        }
+        .item-description small {
+          display: block;
+          color: #666;
+          font-size: 12px;
+        }
+        .invoice-summary {
+          margin: 10px 0;
+          font-size: 14px;
+        }
+        .summary-item {
+          display: flex;
+          justify-content: space-between;
+          margin: 3px 0;
+        }
+        .total {
+          font-weight: bold;
+          border-top: 1px solid #000;
+          padding-top: 3px;
+          font-size: 16px;
+        }
+        .payment-method {
+          margin: 10px 0;
+          font-size: 14px;
+        }
+        .invoice-notes {
+          margin: 10px 0;
+          font-size: 14px;
+        }
+        .invoice-notes h4 {
+          margin: 5px 0;
+          font-weight: bold;
+        }
+        .invoice-footer {
+          margin-top: 15px;
+          text-align: center;
+          font-size: 14px;
+          border-top: 1px dashed #000;
+          padding-top: 5px;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
       // Renderizar el componente en el contenedor
-      const printContent = document.createElement('div');
-      printContent.innerHTML = `
+      printContainer.innerHTML = `
         <div class="print-container">
           <div class="invoice-header">
             <div class="company-info">
               <h1>${printData.company.name}</h1>
               <p>${printData.company.address}</p>
-              <p>RIF: ${printData.company.rif}</p>
+              <p>RNC: ${printData.company.rif}</p>
               <p>Teléfono: ${printData.company.phone}</p>
             </div>
           </div>
@@ -468,7 +591,7 @@ const POSSystem = () => {
           <div class="client-info">
             <h3>Cliente</h3>
             <p><strong>Nombre:</strong> ${printData.client.name}</p>
-            ${printData.client.identification ? `<p><strong>RIF/CI:</strong> ${printData.client.identification}</p>` : ''}
+            ${printData.client.identification ? `<p><strong>RNC/CI:</strong> ${printData.client.identification}</p>` : ''}
             ${printData.client.address ? `<p><strong>Dirección:</strong> ${printData.client.address}</p>` : ''}
             ${printData.client.phone ? `<p><strong>Teléfono:</strong> ${printData.client.phone}</p>` : ''}
           </div>
@@ -506,10 +629,12 @@ const POSSystem = () => {
               <span>Subtotal:</span>
               <span>${printData.invoice.subtotal.toFixed(2)}</span>
             </div>
+            ${printData.invoice.taxAmount > 0 ? `
             <div class="summary-item">
-              <span>IVA (${printData.invoice.taxRate}%):</span>
+              <span>ITBIS (${printData.invoice.taxRate}%):</span>
               <span>${printData.invoice.taxAmount.toFixed(2)}</span>
             </div>
+            ` : ''}
             <div class="summary-item total">
               <span>Total:</span>
               <span>${printData.invoice.total.toFixed(2)}</span>
@@ -551,18 +676,15 @@ const POSSystem = () => {
           </div>
         </div>
       `;
-      
-      printContainer.appendChild(printContent);
 
-      // Usar printJS para imprimir el contenido
-      printJS({
-        printable: 'print-invoice-container',
-        type: 'html',
-        documentTitle: `Factura-${printData.invoice.invoiceNumber}`,
-        maxWidth: 800,
-        onPrintDialogClose: () => {
-          // Limpiar después de imprimir
+      // Usar el API nativo de impresión
+      setTimeout(() => {
+        window.print();
+        
+        // Limpiar después de imprimir
+        setTimeout(() => {
           document.body.removeChild(printContainer);
+          document.head.removeChild(styleElement);
           
           // Reset relevant states after successful print
           setPrintModalOpen(false);
@@ -575,95 +697,8 @@ const POSSystem = () => {
           setSearchTerm('');
           setStatusMessage('Factura impresa exitosamente');
           setTimeout(() => setStatusMessage(''), 2000);
-        },
-        css: `
-          .print-container {
-            font-family: Arial, sans-serif;
-            max-width: 80mm;
-            padding: 5mm;
-          }
-          .invoice-header {
-            text-align: center;
-            margin-bottom: 10px;
-          }
-          .company-info h1 {
-            font-size: 16px;
-            margin: 0;
-          }
-          .company-info p {
-            font-size: 12px;
-            margin: 2px 0;
-          }
-          .invoice-title {
-            text-align: center;
-            margin: 10px 0;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 5px;
-          }
-          .invoice-number, .invoice-date {
-            font-size: 12px;
-            margin: 2px 0;
-          }
-          .client-info {
-            margin: 10px 0;
-            font-size: 12px;
-          }
-          .client-info h3 {
-            font-size: 14px;
-            margin: 5px 0;
-          }
-          .invoice-items table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-          }
-          .invoice-items th {
-            border-bottom: 1px solid #000;
-            text-align: left;
-            padding: 3px;
-          }
-          .invoice-items td {
-            padding: 3px;
-            border-bottom: 1px dashed #ccc;
-          }
-          .item-description small {
-            display: block;
-            color: #666;
-          }
-          .invoice-summary {
-            margin: 10px 0;
-            font-size: 12px;
-          }
-          .summary-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 2px 0;
-          }
-          .total {
-            font-weight: bold;
-            border-top: 1px solid #000;
-            padding-top: 3px;
-          }
-          .payment-method {
-            margin: 10px 0;
-            font-size: 12px;
-          }
-          .invoice-notes {
-            margin: 10px 0;
-            font-size: 12px;
-          }
-          .invoice-notes h4 {
-            margin: 5px 0;
-          }
-          .invoice-footer {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 12px;
-            border-top: 1px dashed #000;
-            padding-top: 5px;
-          }
-        `
-      });
+        }, 1000);
+      }, 500);
     } catch (error) {
       console.error('Error al imprimir:', error);
       setError(`Error al imprimir: ${error.message}`);
@@ -995,7 +1030,10 @@ const POSSystem = () => {
         // Incluir los totales correctos
         totals: totalsToUse,
         // Incluir directamente el monto de efectivo para evitar dependencias
-        actualCashReceived: isCredit ? 0 : actualCashReceived
+        actualCashReceived: isCredit ? 0 : actualCashReceived,
+        // Incluir si se aplica impuesto
+        applyTax: invoiceData.applyTax !== undefined ? invoiceData.applyTax : applyTax,
+        taxAmount: totalsToUse.tax
       };
       
       // Guardar los datos de la factura actual para el modal
@@ -1188,7 +1226,18 @@ const POSSystem = () => {
           // Nombre de cliente en compras fiadas
           clientName: invoiceData.isCredit ? paymentDetails.clientName : 'Cliente General',
           // Efectivo recibido si aplica
-          actualCashReceived: invoiceData.isCredit ? 0 : cashAmount
+          actualCashReceived: invoiceData.isCredit ? 0 : cashAmount,
+          // Agregar estos campos para que InvoicePreviewModal pueda accederlos directamente
+          cashReceived: invoiceData.isCredit ? 0 : cashAmount,
+          change: change,
+          // Añadir indicador de si se aplica impuesto
+          applyTax: applyTax,
+          taxAmount: tax,
+          paymentDetails: {
+            ...paymentDetails,
+            received: invoiceData.isCredit ? 0 : cashAmount,
+            change: change
+          }
         });
         
         // Open confirmation modal for print

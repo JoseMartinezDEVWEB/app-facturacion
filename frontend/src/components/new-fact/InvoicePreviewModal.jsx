@@ -97,11 +97,21 @@ const InvoicePreviewModal = ({
     const items = invoiceData?.items || [];
     const subtotal = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
     const taxRate = config.taxRate || 18;
-    const taxAmount = invoiceData?.taxAmount || (subtotal * taxRate / 100);
+    
+    // Solo aplicar impuesto si viene especificado o si hay un valor existente
+    let taxAmount = 0;
+    if (invoiceData?.taxAmount !== undefined) {
+      // Si tenemos un valor específico de taxAmount, usarlo
+      taxAmount = invoiceData.taxAmount;
+    } else if (invoiceData?.applyTax === true) {
+      // Si applyTax es true, calcular el impuesto
+      taxAmount = subtotal * taxRate / 100;
+    }
+    
     const total = invoiceData?.total || (subtotal + taxAmount);
     
-    // Establecer un valor fijo de 500 para efectivo si no hay nada
-    const cashValue = 500;
+    // Establecer un valor fijo de 0 para efectivo si no hay nada
+    const cashValue = 0;
     
     // Intentar obtener el efectivo de cualquier ubicación posible, o usar valor por defecto
     let cashReceived = cashValue;
