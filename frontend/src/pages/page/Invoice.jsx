@@ -14,7 +14,7 @@ const PURCHASE_TYPES = {
   WHOLESALE: 'WHOLESALE'
 };
 
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = 'http://localhost:4500/api';
 
 // Animation variants for different components
 const fadeIn = {

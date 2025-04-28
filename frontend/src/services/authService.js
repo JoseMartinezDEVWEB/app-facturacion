@@ -83,7 +83,7 @@ export const validateToken = async () => {
 export const login = async (email, password) => {
   try {
     // Cambia la ruta a la correcta
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post(API_ROUTES.AUTH.LOGIN, { email, password });
     
     if (response.data && response.data.token) {
       localStorage.setItem('token', response.data.token);

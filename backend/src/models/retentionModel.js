@@ -92,7 +92,6 @@ const retentionSchema = mongoose.Schema({
 });
 
 // Índices para mejorar el rendimiento de las consultas
-retentionSchema.index({ retentionNumber: 1 });
 retentionSchema.index({ invoice: 1 });
 retentionSchema.index({ date: 1 });
 retentionSchema.index({ status: 1 });

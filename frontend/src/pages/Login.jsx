@@ -3,25 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { ERROR_MESSAGES } from '../config/config';
+import { useLoading } from '../context/LoadingContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { showLoader, hideLoader } = useLoading();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // Redirigir si ya está autenticado - usando un flag para evitar múltiples verificaciones
-  const [redirectChecked, setRedirectChecked] = useState(false);
-  
+  // useEffect para redirección personalizada después de la autenticación
   useEffect(() => {
-    // Solo verificar una vez cuando isAuthenticated cambie y no estemos cargando
-    if (!authLoading && isAuthenticated && !redirectChecked) {
-      setRedirectChecked(true);
-      navigate('/dashboard');
+    // Solo si la autenticación fue exitosa y no estamos cargando
+    if (!authLoading && isAuthenticated && loginSuccess) {
+      // La redirección ocurrirá desde la función de handleLogin
+      // después de que termine la animación de carga
     }
-  }, [isAuthenticated, navigate, authLoading, redirectChecked]);
+  }, [isAuthenticated, navigate, authLoading, loginSuccess]);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -34,19 +35,35 @@ const Login = () => {
 
     setLoading(true);
     setError('');
+    setLoginSuccess(false);
+
+    // Mostrar la animación inmediatamente al hacer clic en el botón
+    const loaderPromise = showLoader(3000, 'Iniciando sesión...');
 
     // Validaciones básicas
     if (!formData.email || !formData.password) {
+      hideLoader(); // Ocultar loader si faltan datos
       setError('Por favor, complete todos los campos');
       setLoading(false);
       return;
     }
 
     try {
+      // Intentar login (la animación ya se está mostrando)
       await login(formData);
-      // La redirección se maneja en el useEffect
+      
+      // Marcar login como exitoso
+      setLoginSuccess(true);
+      
+      // Esperar a que termine la animación antes de redirigir
+      loaderPromise.then(() => {
+        navigate('/dashboard');
+      });
+      
     } catch (err) {
       console.error('Error de login:', err);
+      
+      // No es necesario ocultar el loader aquí ya que se ocultará automáticamente después de 3 segundos
       
       // Manipular errores comunes
       const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
@@ -54,7 +71,6 @@ const Login = () => {
       
       // Incrementar contador de intentos
       setRetryCount(prev => prev + 1);
-    } finally {
       setLoading(false);
     }
   };

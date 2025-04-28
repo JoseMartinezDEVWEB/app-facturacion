@@ -1,8 +1,8 @@
-import axios from 'axios';
-import { getAuthConfig } from './authService';
-import { API_ROUTES } from '../config/config';
+import api from '../config/apis';
+import { API_BASE_URL, API_ROUTES } from '../config/config';
 
-const API_URL = API_ROUTES.QUOTES;
+// Base endpoint for quotes
+const API_URL = `${API_BASE_URL}${API_ROUTES.QUOTES}`;
 
 /**
  * Obtiene todas las cotizaciones con filtros opcionales
@@ -12,14 +12,12 @@ const API_URL = API_ROUTES.QUOTES;
 export const getQuotes = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        params.append(key, filters[key]);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value);
       }
     });
-    
-    const response = await axios.get(`${API_URL}?${params.toString()}`, getAuthConfig());
+    const response = await api.get(`${API_URL}?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error en getQuotes:', error);
@@ -34,7 +32,7 @@ export const getQuotes = async (filters = {}) => {
  */
 export const getQuoteById = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error en getQuoteById:', error);
@@ -49,7 +47,7 @@ export const getQuoteById = async (id) => {
  */
 export const createQuote = async (quoteData) => {
   try {
-    const response = await axios.post(API_URL, quoteData, getAuthConfig());
+    const response = await api.post(API_URL, quoteData);
     return response.data;
   } catch (error) {
     console.error('Error en createQuote:', error);
@@ -65,7 +63,7 @@ export const createQuote = async (quoteData) => {
  */
 export const updateQuote = async (id, quoteData) => {
   try {
-    const response = await axios.put(`${API_URL}/${id}`, quoteData, getAuthConfig());
+    const response = await api.put(`${API_URL}/${id}`, quoteData);
     return response.data;
   } catch (error) {
     console.error('Error en updateQuote:', error);
@@ -80,7 +78,7 @@ export const updateQuote = async (id, quoteData) => {
  */
 export const approveQuote = async (id) => {
   try {
-    const response = await axios.post(`${API_URL}/${id}/approve`, {}, getAuthConfig());
+    const response = await api.post(`${API_URL}/${id}/approve`, {});
     return response.data;
   } catch (error) {
     console.error('Error en approveQuote:', error);
@@ -96,7 +94,7 @@ export const approveQuote = async (id) => {
  */
 export const rejectQuote = async (id, data) => {
   try {
-    const response = await axios.post(`${API_URL}/${id}/reject`, data, getAuthConfig());
+    const response = await api.post(`${API_URL}/${id}/reject`, data);
     return response.data;
   } catch (error) {
     console.error('Error en rejectQuote:', error);
@@ -111,7 +109,7 @@ export const rejectQuote = async (id, data) => {
  */
 export const convertToInvoice = async (id) => {
   try {
-    const response = await axios.post(`${API_URL}/${id}/convert-to-invoice`, {}, getAuthConfig());
+    const response = await api.post(`${API_URL}/${id}/convert-to-invoice`, {});
     return response.data;
   } catch (error) {
     console.error('Error en convertToInvoice:', error);
@@ -126,8 +124,7 @@ export const convertToInvoice = async (id) => {
  */
 export const generateQuotePDF = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}/pdf`, {
-      ...getAuthConfig(),
+    const response = await api.get(`${API_URL}/${id}/pdf`, {
       responseType: 'blob'
     });
     return response.data;
@@ -144,7 +141,7 @@ export const generateQuotePDF = async (id) => {
  */
 export const deleteQuote = async (id) => {
   try {
-    const response = await axios.delete(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.delete(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error en deleteQuote:', error);

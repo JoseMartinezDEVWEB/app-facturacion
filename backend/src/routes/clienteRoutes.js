@@ -1,6 +1,7 @@
 // routes/clienteRoutes.js
 import express from 'express';
 import { 
+  getClientes,        // Get all clients
   getClientesStats, 
   searchClientes, 
   createCliente, 
@@ -15,6 +16,9 @@ const router = express.Router();
 
 // Proteger todas las rutas con autenticación
 router.use(authMiddleware);
+
+// Listar todos los clientes
+router.get('/', getClientes);
 
 // Rutas para estadísticas y búsqueda
 router.get('/stats', getClientesStats);

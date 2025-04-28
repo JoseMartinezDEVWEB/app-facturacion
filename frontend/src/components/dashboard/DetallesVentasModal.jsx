@@ -26,7 +26,7 @@ const DetallesVentasModal = ({ isOpen, onClose, data }) => {
     setError(null);
     
     try {
-      const baseURL = import.meta.env.DEV ? 'http://localhost:4000' : '';
+      const baseURL = import.meta.env.DEV ? 'http://localhost:4500' : '';
       const response = await axios.get(`${baseURL}/api/dashboard/stats?period=${period}`);
       
       if (response.data.success) {

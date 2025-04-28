@@ -3,7 +3,7 @@ import axios from 'axios';
 import { mockData } from './dashboardData';
 
 // Configuración global
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'http://localhost:4500/api';
 const USE_MOCK_DATA = false; // Cambiar a false para usar la API real
 
 // Creamos la instancia de axios

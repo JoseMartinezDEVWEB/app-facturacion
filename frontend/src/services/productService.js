@@ -1,7 +1,8 @@
-import axios from 'axios';
-import { getAuthConfig } from './authService';
+import api from '../config/apis';
+import { API_ROUTES } from '../config/config';
 
-const API_URL = '/products';
+// Base endpoint for products
+const API_URL = API_ROUTES.PRODUCTS;
 
 /**
  * Obtiene todos los productos con filtros opcionales
@@ -11,14 +12,12 @@ const API_URL = '/products';
 export const getProducts = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-        params.append(key, filters[key]);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value);
       }
     });
-    
-    const response = await axios.get(`${API_URL}?${params.toString()}`, getAuthConfig());
+    const response = await api.get(`${API_URL}?${params.toString()}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener los productos' };
@@ -32,7 +31,7 @@ export const getProducts = async (filters = {}) => {
  */
 export const getProductById = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el producto' };
@@ -46,7 +45,7 @@ export const getProductById = async (id) => {
  */
 export const createProduct = async (productData) => {
   try {
-    const response = await axios.post(API_URL, productData, getAuthConfig());
+    const response = await api.post(API_URL, productData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al crear el producto' };
@@ -61,7 +60,7 @@ export const createProduct = async (productData) => {
  */
 export const updateProduct = async (id, productData) => {
   try {
-    const response = await axios.put(`${API_URL}/${id}`, productData, getAuthConfig());
+    const response = await api.put(`${API_URL}/${id}`, productData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al actualizar el producto' };
@@ -75,7 +74,7 @@ export const updateProduct = async (id, productData) => {
  */
 export const deleteProduct = async (id) => {
   try {
-    const response = await axios.delete(`${API_URL}/${id}`, getAuthConfig());
+    const response = await api.delete(`${API_URL}/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al eliminar el producto' };
@@ -90,10 +89,9 @@ export const deleteProduct = async (id) => {
  */
 export const updateProductStock = async (id, quantity) => {
   try {
-    const response = await axios.post(
+    const response = await api.post(
       `${API_URL}/${id}/stock`,
-      { quantity },
-      getAuthConfig()
+      { quantity }
     );
     return response.data;
   } catch (error) {
@@ -108,7 +106,7 @@ export const updateProductStock = async (id, quantity) => {
  */
 export const getProductMovements = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}/movements`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}/movements`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el historial de movimientos' };
@@ -122,7 +120,7 @@ export const getProductMovements = async (id) => {
  */
 export const getProductStats = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}/stats`, getAuthConfig());
+    const response = await api.get(`${API_URL}/${id}/stats`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener las estadísticas' };

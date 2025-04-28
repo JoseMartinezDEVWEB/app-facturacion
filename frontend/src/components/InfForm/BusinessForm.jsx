@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000/api'; // Ajusta la URL de tu backend
+const API_BASE_URL = 'http://localhost:4500/api'; // Ajusta la URL de tu backend
 
 // eslint-disable-next-line react/prop-types
 const BusinessForm = ({ onClose, onSave }) => {

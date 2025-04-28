@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useLoading } from '../context/LoadingContext';
 
 import Drawer from './Drawer';
 import DashboardFull from '../components/dashboard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { showLoader } = useLoading();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleLogout = () => {
+    // Mostrar animación durante el cierre de sesión
+    showLoader(2000, 'Cerrando sesión...');
     localStorage.removeItem('token');
     navigate('/login');
   };
