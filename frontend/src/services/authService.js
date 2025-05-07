@@ -136,3 +136,34 @@ export const refreshToken = async () => {
     throw error;
   }
 };
+
+/**
+ * Obtiene información del usuario actual
+ * @returns {Promise<Object>} Información del usuario
+ */
+export const getUserInfo = async () => {
+  try {
+    const response = await api.get(API_ROUTES.AUTH.USER_INFO);
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo información del usuario:', error);
+    
+    // Si no se puede obtener la información del usuario, usar datos almacenados localmente
+    const userName = localStorage.getItem('userName');
+    const userRole = localStorage.getItem('userRole');
+    
+    if (userName && userRole) {
+      console.log('Usando información de usuario almacenada localmente');
+      return {
+        username: userName,
+        role: userRole
+      };
+    }
+    
+    // Si no hay datos locales, devolver un objeto por defecto
+    return {
+      username: 'Usuario',
+      role: 'invitado'
+    };
+  }
+};

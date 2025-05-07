@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../config/apis';
+import { getUserInfo } from '../services/authService';
 
 // Elementos del menú de navegación
 const menuItems = [
@@ -78,12 +79,12 @@ const Drawer = ({ isOpen, onClose }) => {
     try {
       setUserInfo(prev => ({ ...prev, isLoading: true }));
       
-      // Hacer la petición al endpoint correcto de auth
-      const response = await api.get('/auth/users/info');
+      // Usar la nueva función que maneja errores internamente
+      const userData = await getUserInfo();
       
-      if (response && response.data) {
-        // El backend devuelve 'username' y 'role'
-        const { username, role } = response.data;
+      if (userData) {
+        // Extraer username y role del objeto de respuesta
+        const { username, role } = userData;
         // Almacenar en localStorage para persistencia
         localStorage.setItem('userName', username);
         localStorage.setItem('userRole', role);
@@ -99,24 +100,13 @@ const Drawer = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Error al obtener información del usuario:', error);
       
-      // Usar datos de localStorage si la API falla
+      // La función getUserInfo ya maneja los errores, pero por si acaso
+      // también manejamos aquí utilizando datos almacenados localmente
       setUserInfo({
-        nombre: localStorage.getItem('userName') || '',
-        rol: localStorage.getItem('userRole') || '',
+        nombre: localStorage.getItem('userName') || 'Usuario',
+        rol: localStorage.getItem('userRole') || 'Invitado',
         isLoading: false
       });
-      
-      // Intentar cargar desde sesión/cookies como respaldo
-      const sessionUserName = sessionStorage.getItem('userName') || document.cookie.match(/userName=([^;]+)/)?.pop();
-      const sessionUserRole = sessionStorage.getItem('userRole') || document.cookie.match(/userRole=([^;]+)/)?.pop();
-      
-      if (sessionUserName && !userInfo.nombre) {
-        setUserInfo(prev => ({
-          ...prev,
-          nombre: sessionUserName,
-          rol: sessionUserRole || prev.rol
-        }));
-      }
     }
   };
 

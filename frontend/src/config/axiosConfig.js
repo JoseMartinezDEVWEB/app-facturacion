@@ -9,6 +9,9 @@ axios.defaults.timeout = 30000; // 30 segundos
 // Interceptor para manejar tokens de autenticación
 axios.interceptors.request.use(
   (config) => {
+    // Logs de depuración para diagnosticar problemas de ruta
+    console.log(`Ruta solicitada: ${config.url}`);
+    
     // No inyectar Authorization en endpoints de autenticación
     const url = config.url || '';
     if (url.includes('/auth/login') || url.includes('/auth/refresh-token') || url.includes('/auth/check-session')) {
@@ -35,8 +38,15 @@ axios.interceptors.response.use(
     if (url.includes('/auth/login') || url.includes('/auth/refresh-token') || url.includes('/auth/check-session')) {
       return Promise.reject(error);
     }
+    
     console.error('Error de respuesta axios:', error.response || error);
+    
     if (error.response) {
+      // Mensaje específico para errores 404 en users/info
+      if (error.response.status === 404 && url.includes('/users/info')) {
+        console.warn('Ruta /users/info no encontrada. Usando datos locales si están disponibles.');
+      }
+      
       switch (error.response.status) {
         case 401:
           console.log('No autorizado - Sesión caducada o token inválido');

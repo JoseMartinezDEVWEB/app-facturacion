@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { LoadingProvider } from './context/LoadingContext.jsx';
 import { BusinessProvider } from './context/BusinessContext.jsx';
@@ -51,74 +50,72 @@ const App = () => {
         <BusinessProvider>
           <Router>
             <Loader />
-            <AnimatePresence mode="wait">
-              <Routes>
-                {/* Rutas públicas */}
-                <Route path="/" element={<Welcome />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/unauthorized" element={<Unauthorized />} />
+            <Routes>
+              {/* Rutas públicas */}
+              <Route path="/" element={<Welcome />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
 
-                {/* Rutas Protegidas (Dashboard y subrutas) */}
+              {/* Rutas Protegidas (Dashboard y subrutas) */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DashboardHome />} />
+                <Route path="productos" element={<Productos />} />
+                <Route path="categorias" element={<Categorias />} />
+                
+                {/* Rutas para Facturas */}
+                <Route path="facturas" element={<Facturas />} />
+                <Route path="facturas/crear" element={<CrearFactura />} />
+                <Route path="facturas/:id" element={<FacturaDetalle />} />
+                
+                {/* Rutas para Notas de Crédito */}
+                <Route path="notas-credito" element={<NotasCredito />} />
+                <Route path="notas-credito/:id" element={<NotaCreditoDetalle />} />
+                <Route path="crear-nota-credito/:invoiceId" element={<CrearNotaCredito />} />
+                
+                {/* Rutas para Cotizaciones */}
+                <Route path="cotizaciones" element={<Cotizaciones />} />
+                <Route path="cotizaciones/:id" element={<CotizacionDetalle />} />
+                <Route path="crear-cotizacion" element={<CrearCotizacion />} />
+                
+                <Route path="GestionGasto" element={<GastoHome />} />
+                <Route path="clientes" element={<ClienteForm />} />
+
+                {/* Rutas para retenciones */}
+                <Route path="retenciones" element={<Retenciones />} />
+                <Route path="retenciones/:id" element={<DetalleRetencion />} />
+                <Route path="retenciones/:id/editar" element={<EditarRetencion />} />
+                <Route path="crear-retencion/:invoiceId" element={<CrearRetencion />} />
+                
+                {/* Rutas para proveedores */}
+                <Route path="proveedores" element={<Proveedores />} />
+                
+                {/* Rutas para compras a crédito */}
+                <Route path="compras-credito" element={<ComprasCredito />} />
+                <Route path="compras-credito/:id" element={<DetalleCompraCredito />} />
+                <Route path="crear-compra-credito" element={<CrearCompraCredito />} />
+                <Route path="compras-credito/:id/pago" element={<RegistrarPagoCompra />} />
+                
+                {/* Ruta para configuración del negocio */}
                 <Route 
-                  path="/dashboard" 
+                  path="configuracion" 
                   element={
-                    <ProtectedRoute>
-                      <Dashboard />
+                    <ProtectedRoute roles={['admin', 'encargado']}> 
+                      <BusinessSettings />
                     </ProtectedRoute>
                   }
-                >
-                  <Route index element={<DashboardHome />} />
-                  <Route path="productos" element={<Productos />} />
-                  <Route path="categorias" element={<Categorias />} />
-                  
-                  {/* Rutas para Facturas */}
-                  <Route path="facturas" element={<Facturas />} />
-                  <Route path="facturas/crear" element={<CrearFactura />} />
-                  <Route path="facturas/:id" element={<FacturaDetalle />} />
-                  
-                  {/* Rutas para Notas de Crédito */}
-                  <Route path="notas-credito" element={<NotasCredito />} />
-                  <Route path="notas-credito/:id" element={<NotaCreditoDetalle />} />
-                  <Route path="crear-nota-credito/:invoiceId" element={<CrearNotaCredito />} />
-                  
-                  {/* Rutas para Cotizaciones */}
-                  <Route path="cotizaciones" element={<Cotizaciones />} />
-                  <Route path="cotizaciones/:id" element={<CotizacionDetalle />} />
-                  <Route path="crear-cotizacion" element={<CrearCotizacion />} />
-                  
-                  <Route path="GestionGasto" element={<GastoHome />} />
-                  <Route path="clientes" element={<ClienteForm />} />
-
-                  {/* Rutas para retenciones */}
-                  <Route path="retenciones" element={<Retenciones />} />
-                  <Route path="retenciones/:id" element={<DetalleRetencion />} />
-                  <Route path="retenciones/:id/editar" element={<EditarRetencion />} />
-                  <Route path="crear-retencion/:invoiceId" element={<CrearRetencion />} />
-                  
-                  {/* Rutas para proveedores */}
-                  <Route path="proveedores" element={<Proveedores />} />
-                  
-                  {/* Rutas para compras a crédito */}
-                  <Route path="compras-credito" element={<ComprasCredito />} />
-                  <Route path="compras-credito/:id" element={<DetalleCompraCredito />} />
-                  <Route path="crear-compra-credito" element={<CrearCompraCredito />} />
-                  <Route path="compras-credito/:id/pago" element={<RegistrarPagoCompra />} />
-                  
-                  {/* Ruta para configuración del negocio */}
-                  <Route 
-                    path="configuracion" 
-                    element={
-                      <ProtectedRoute roles={['admin', 'encargado']}> 
-                        <BusinessSettings />
-                      </ProtectedRoute>
-                    }
-                  />
-                </Route>
-                
-                {/* Redirección para rutas no encontradas */}
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </AnimatePresence>
+                />
+              </Route>
+              
+              {/* Redirección para rutas no encontradas */}
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
           </Router>
         </BusinessProvider>
       </AuthProvider>

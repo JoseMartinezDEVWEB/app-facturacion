@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 
 const LoadingContext = createContext();
 
@@ -7,9 +7,24 @@ export const useLoading = () => useContext(LoadingContext);
 export const LoadingProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Cargando...');
+  
+  // Efecto para garantizar que el loader nunca se quede más de 3 segundos
+  useEffect(() => {
+    let timer;
+    if (isLoading) {
+      timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 3000); // Forzar cierre después de exactamente 3 segundos
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isLoading]);
 
   // Función para mostrar el loader con un tiempo máximo y un mensaje opcional
   const showLoader = (maxTime = 3000, message = 'Cargando...') => {
+    // Nunca permitir tiempos mayores a 3000ms
+    const safeTime = Math.min(maxTime, 3000);
     setLoadingMessage(message);
     setIsLoading(true);
     
@@ -18,13 +33,8 @@ export const LoadingProvider = ({ children }) => {
       setTimeout(() => {
         setIsLoading(false);
         resolve();
-      }, maxTime);
+      }, safeTime);
     });
-  };
-
-  // Función específica para la carga inicial (5 segundos)
-  const showInitialLoader = (message = 'Iniciando sistema...') => {
-    return showLoader(5000, message);
   };
 
   // Función para ocultar el loader manualmente si es necesario
@@ -38,7 +48,6 @@ export const LoadingProvider = ({ children }) => {
         isLoading,
         loadingMessage,
         showLoader,
-        showInitialLoader,
         hideLoader
       }}
     >

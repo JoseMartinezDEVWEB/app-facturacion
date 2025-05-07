@@ -12,7 +12,7 @@ export const API_ROUTES = {
     REGISTER: '/auth/register-admin',
     LOGOUT: '/auth/logout',
     VALIDATE: '/auth/validate',
-    USER_INFO: '/auth/users/info'
+    USER_INFO: '/users/info'
   },
   
   // Clientes
