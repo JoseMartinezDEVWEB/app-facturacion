@@ -9,7 +9,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import TotalVentas from './TotalVentas';
 import FacturasCreadas from './FacturasCreadas';
 import BalanceNeto from './BalanceNeto';
-import TotalClientes from './TotalClientes';
+import TotalClientes from './TotalClientes01';
 import { RefreshCw } from 'lucide-react';
 import VentasDiariasChart from './VentasDiariasChart';
 

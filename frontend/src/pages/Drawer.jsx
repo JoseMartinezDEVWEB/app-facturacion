@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../config/apis';
-import { getUserInfo } from '../services/authService';
 
 // Elementos del menú de navegación
 const menuItems = [
@@ -23,7 +22,13 @@ const menuItems = [
   { id: '/dashboard/GestionGasto', label: 'Gestion de Gastos', icon: '💰' },
   { id: '/dashboard/clientes', label: 'Clientes', icon: '👥' },
   { id: '/dashboard/proveedores', label: 'Proveedores', icon: '🏭' },
-  { id: '/dashboard/configuracion', label: 'Configuración', icon: '⚙️' }
+  { id: '/dashboard/configuracion', label: 'Configuración', icon: '⚙️' },
+  { 
+    id: '/dashboard/conexion-remota', 
+    label: 'Conexión Remota', 
+    icon: '🌐',
+    adminOnly: true // Esta opción solo será visible para admin y superadmin
+  }
 ];
 
 // Función para generar iniciales a partir del nombre del usuario
@@ -79,12 +84,12 @@ const Drawer = ({ isOpen, onClose }) => {
     try {
       setUserInfo(prev => ({ ...prev, isLoading: true }));
       
-      // Usar la nueva función que maneja errores internamente
-      const userData = await getUserInfo();
+      // Hacer la petición al endpoint correcto de auth
+      const response = await api.get('/auth/users/info');
       
-      if (userData) {
-        // Extraer username y role del objeto de respuesta
-        const { username, role } = userData;
+      if (response && response.data) {
+        // El backend devuelve 'username' y 'role'
+        const { username, role } = response.data;
         // Almacenar en localStorage para persistencia
         localStorage.setItem('userName', username);
         localStorage.setItem('userRole', role);
@@ -100,13 +105,24 @@ const Drawer = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Error al obtener información del usuario:', error);
       
-      // La función getUserInfo ya maneja los errores, pero por si acaso
-      // también manejamos aquí utilizando datos almacenados localmente
+      // Usar datos de localStorage si la API falla
       setUserInfo({
-        nombre: localStorage.getItem('userName') || 'Usuario',
-        rol: localStorage.getItem('userRole') || 'Invitado',
+        nombre: localStorage.getItem('userName') || '',
+        rol: localStorage.getItem('userRole') || '',
         isLoading: false
       });
+      
+      // Intentar cargar desde sesión/cookies como respaldo
+      const sessionUserName = sessionStorage.getItem('userName') || document.cookie.match(/userName=([^;]+)/)?.pop();
+      const sessionUserRole = sessionStorage.getItem('userRole') || document.cookie.match(/userRole=([^;]+)/)?.pop();
+      
+      if (sessionUserName && !userInfo.nombre) {
+        setUserInfo(prev => ({
+          ...prev,
+          nombre: sessionUserName,
+          rol: sessionUserRole || prev.rol
+        }));
+      }
     }
   };
 
@@ -134,14 +150,9 @@ const Drawer = ({ isOpen, onClose }) => {
   const displayRole = userInfo.rol || 'Invitado';
   const initials = getInitials(displayName);
 
-  // Filtrar menú según rol
+  // Función para filtrar menú según rol
   const userRole = userInfo.rol;
-  const filteredMenu = userRole === 'cajero'
-    ? menuItems.filter(item =>
-        ['/dashboard','/dashboard/facturas','/dashboard/GestionGasto','/dashboard/clientes','/dashboard/proveedores','/dashboard/categorias']
-        .includes(item.id)
-      )
-    : menuItems;
+  const filteredMenu = filterMenuByRole(menuItems, userRole);
 
   return (
     <>
@@ -281,6 +292,24 @@ const Drawer = ({ isOpen, onClose }) => {
       </motion.div>
     </>
   );
+};
+
+// Función para filtrar menú según rol
+const filterMenuByRole = (items, role) => {
+  if (role === 'cajero') {
+    return items.filter(item =>
+      ['/dashboard','/dashboard/facturas','/dashboard/GestionGasto','/dashboard/clientes','/dashboard/proveedores','/dashboard/categorias']
+      .includes(item.id)
+    );
+  }
+  
+  // Para admin y superadmin mostrar todos los items
+  if (role === 'admin' || role === 'superadmin') {
+    return items;
+  }
+  
+  // Para otros roles, filtrar los items marcados como adminOnly
+  return items.filter(item => !item.adminOnly);
 };
 
 export default Drawer;

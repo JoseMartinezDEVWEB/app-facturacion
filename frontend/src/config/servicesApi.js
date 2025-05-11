@@ -1,19 +1,8 @@
 // src/services/api.js
-import axios from 'axios';
+import api from './axiosConfig';
 import { mockData } from './dashboardData';
 
-// Configuración global
-const API_URL = 'http://localhost:4500/api';
 const USE_MOCK_DATA = false; // Cambiar a false para usar la API real
-
-// Creamos la instancia de axios
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
 
 // Interceptor para añadir el token y hacer logging
 api.interceptors.request.use(
@@ -94,7 +83,7 @@ export const authService = {
     
     try {
       // Intenta obtener información del usuario para verificar la sesión
-      return await api.get('/users/info');
+      return await api.get('/auth/users/info');
     } catch (error) {
       console.error('Error al verificar sesión:', error);
       throw error;
@@ -332,7 +321,7 @@ export const clienteService = {
   }
 };
 
- export const getTopProducts = async (params = {}) => {
+export const getTopProducts = async (params = {}) => {
   try {
     // Parámetros de paginación y filtro
     const { 
@@ -412,8 +401,5 @@ export const clienteService = {
     };
   }
 }
-
-
-
 
 export default api;

@@ -1,11 +1,28 @@
 import { useLoading } from '../context/LoadingContext';
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+// No importes useLocation globalmente
+
+let useLocationSafe = null;
+try {
+  // Intenta importar useLocation solo si hay un Router
+  // Esto previene el error en contextos fuera de Router
+  // eslint-disable-next-line
+  useLocationSafe = require('react-router-dom').useLocation;
+} catch {}
 
 const Loader = () => {
   const { isLoading, loadingMessage, hideLoader } = useLoading();
-  const location = useLocation();
-  const isHomePage = location.pathname === '/';
+  let isHomePage = false;
+
+  // Solo usa useLocation si está disponible (dentro de un Router)
+  if (useLocationSafe) {
+    try {
+      const location = useLocationSafe();
+      isHomePage = location.pathname === '/';
+    } catch {
+      isHomePage = false;
+    }
+  }
 
   // No mostrar loader en la página de inicio
   useEffect(() => {

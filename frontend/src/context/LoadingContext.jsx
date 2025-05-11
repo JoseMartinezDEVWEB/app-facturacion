@@ -22,9 +22,9 @@ export const LoadingProvider = ({ children }) => {
   }, [isLoading]);
 
   // Función para mostrar el loader con un tiempo máximo y un mensaje opcional
-  const showLoader = (maxTime = 3000, message = 'Cargando...') => {
-    // Nunca permitir tiempos mayores a 3000ms
-    const safeTime = Math.min(maxTime, 3000);
+  const showLoader = (maxTime = 2000, message = 'Cargando...') => {
+    // Nunca permitir tiempos mayores a 2000ms
+    const safeTime = Math.min(maxTime, 2000);
     setLoadingMessage(message);
     setIsLoading(true);
     

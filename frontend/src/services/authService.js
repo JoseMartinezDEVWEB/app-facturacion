@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { API_ROUTES } from '../config/config';
 import api from '../config/axiosConfig';
 
@@ -67,11 +66,13 @@ export const getToken = () => {
  * Verifica si el token es válido haciendo una solicitud al servidor
  * @returns {Promise<boolean>} True si el token es válido, false en caso contrario
  */
-export const validateToken = async () => {
+export const validateToken = async (apiClient) => {
   try {
     if (!isAuthenticated()) return false;
     
-    const response = await axios.get('/api/auth/validate', getAuthConfig());
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
+    const response = await client.get('/auth/validate', getAuthConfig());
     return response.data.valid;
   } catch (error) {
     console.error('Error validando token:', error);
@@ -80,20 +81,24 @@ export const validateToken = async () => {
 }; 
 
 
-export const login = async (email, password) => {
+export const login = async (email, password, apiClient) => {
   try {
-    // Cambia la ruta a la correcta
-    const response = await api.post(API_ROUTES.AUTH.LOGIN, { email, password });
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
     
-    if (response.data && response.data.token) {
-      localStorage.setItem('token', response.data.token);
+    // Cambia la ruta a la correcta
+    const response = await client.post(API_ROUTES.AUTH.LOGIN, { email, password });
+    
+    // response YA ES data por el interceptor
+    if (response && response.token) {
+      localStorage.setItem('token', response.token);
       // También guarda el refresh token si tu API lo proporciona
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (response.refreshToken) {
+        localStorage.setItem('refreshToken', response.refreshToken);
       }
     }
     
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error en authService.login:', error);
     if (error.response?.status === 401) {
@@ -109,7 +114,7 @@ export const logout = () => {
   return true;
 };
 
-export const refreshToken = async () => {
+export const refreshToken = async (apiClient) => {
   try {
     const refreshToken = localStorage.getItem('refreshToken');
     
@@ -117,7 +122,9 @@ export const refreshToken = async () => {
       throw new Error('No hay refresh token disponible');
     }
     
-    const response = await api.post('/auth/refresh-token', { refreshToken });
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
+    const response = await client.post('/auth/refresh-token', { refreshToken });
     
     if (response.data && response.data.token) {
       localStorage.setItem('token', response.data.token);
@@ -134,36 +141,5 @@ export const refreshToken = async () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     throw error;
-  }
-};
-
-/**
- * Obtiene información del usuario actual
- * @returns {Promise<Object>} Información del usuario
- */
-export const getUserInfo = async () => {
-  try {
-    const response = await api.get(API_ROUTES.AUTH.USER_INFO);
-    return response.data;
-  } catch (error) {
-    console.error('Error obteniendo información del usuario:', error);
-    
-    // Si no se puede obtener la información del usuario, usar datos almacenados localmente
-    const userName = localStorage.getItem('userName');
-    const userRole = localStorage.getItem('userRole');
-    
-    if (userName && userRole) {
-      console.log('Usando información de usuario almacenada localmente');
-      return {
-        username: userName,
-        role: userRole
-      };
-    }
-    
-    // Si no hay datos locales, devolver un objeto por defecto
-    return {
-      username: 'Usuario',
-      role: 'invitado'
-    };
   }
 };

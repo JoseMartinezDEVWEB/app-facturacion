@@ -2,55 +2,76 @@ import axios from 'axios';
 import { API_BASE_URL } from './config';
 
 // Configuración global de axios
-axios.defaults.baseURL = API_BASE_URL;
-axios.defaults.headers.common['Content-Type'] = 'application/json';
-axios.defaults.timeout = 30000; // 30 segundos
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000,
+});
 
-// Interceptor para manejar tokens de autenticación
-axios.interceptors.request.use(
+// Interceptor para añadir el token de autenticación
+api.interceptors.request.use(
   (config) => {
-    // Logs de depuración para diagnosticar problemas de ruta
-    console.log(`Ruta solicitada: ${config.url}`);
-    
     // No inyectar Authorization en endpoints de autenticación
     const url = config.url || '';
     if (url.includes('/auth/login') || url.includes('/auth/refresh-token') || url.includes('/auth/check-session')) {
       return config;
     }
-    // Obtener token del localStorage
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores de respuesta
-axios.interceptors.response.use(
+// Interceptor para manejar errores de respuesta y refresh token
+api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // No manejar aquí auth endpoints
+  async (error) => {
     const url = error.config?.url || '';
+    // No manejar aquí auth endpoints
     if (url.includes('/auth/login') || url.includes('/auth/refresh-token') || url.includes('/auth/check-session')) {
       return Promise.reject(error);
     }
-    
-    console.error('Error de respuesta axios:', error.response || error);
-    
-    if (error.response) {
-      // Mensaje específico para errores 404 en users/info
-      if (error.response.status === 404 && url.includes('/users/info')) {
-        console.warn('Ruta /users/info no encontrada. Usando datos locales si están disponibles.');
+    // Si es 401 y hay refresh token, intentar refrescar
+    if (error.response && error.response.status === 401 && !error.config._retry) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        error.config._retry = true;
+        try {
+          const res = await api.post('/auth/refresh-token', { refreshToken });
+          if (res.data && res.data.token) {
+            localStorage.setItem('token', res.data.token);
+            if (res.data.refreshToken) {
+              localStorage.setItem('refreshToken', res.data.refreshToken);
+            }
+            error.config.headers['Authorization'] = `Bearer ${res.data.token}`;
+            return api(error.config);
+          }
+        } catch (refreshError) {
+          // Si falla el refresh, limpiar y redirigir
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 500);
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // Si no hay refresh token, limpiar y redirigir
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 500);
       }
-      
+    }
+    // Otros errores
+    if (error.response) {
       switch (error.response.status) {
-        case 401:
-          console.log('No autorizado - Sesión caducada o token inválido');
-          break;
         case 403:
           console.log('Prohibido - No tienes permisos para esta acción');
           break;
@@ -70,4 +91,4 @@ axios.interceptors.response.use(
   }
 );
 
-export default axios; 
+export default api; 

@@ -11,7 +11,7 @@ export const BusinessProvider = ({ children }) => {
   const [businessInfo, setBusinessInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   // Usar useCallback para evitar recreaciones innecesarias de la función
   const fetchBusinessInfo = useCallback(async () => {
@@ -33,6 +33,8 @@ export const BusinessProvider = ({ children }) => {
 
   // Cargar datos del negocio solo al montar el componente o al autenticar
   useEffect(() => {
+    // Esperar a que termine la verificación de sesión
+    if (authLoading) return;
     // Si no está autenticado, marcar como cargado y salir
     if (!isAuthenticated) {
       setLoading(false);
@@ -42,7 +44,7 @@ export const BusinessProvider = ({ children }) => {
     if (businessInfo) return;
     // Autenticado y aún no cargado: obtener datos del negocio
     fetchBusinessInfo();
-  }, [isAuthenticated, fetchBusinessInfo, businessInfo]);
+  }, [isAuthenticated, authLoading, fetchBusinessInfo, businessInfo]);
 
   // Actualizar datos del negocio en el contexto
   const updateBusinessInfo = useCallback((newInfo) => {

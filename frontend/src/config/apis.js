@@ -1,5 +1,3 @@
-/* eslint-disable no-useless-catch */
-/* eslint-disable no-undef */
 import axios from 'axios';
 
 // Configuración base de la API

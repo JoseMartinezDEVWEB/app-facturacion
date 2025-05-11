@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
-  const { showLoader } = useLoading();
+  const { showLoader, hideLoader } = useLoading();
 
   // Usar useCallback para evitar recreaciones innecesarias de la función
   const checkAuth = useCallback(async () => {
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         // Mostrar animación durante la verificación de autenticación
-        await showLoader(2000, 'Verificando sesión...');
+        await showLoader(800, 'Verificando sesión...');
         setIsAuthenticated(true);
         // Intentar obtener información del usuario si es necesario
       } catch (error) {
@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }) => {
     }
     
     setLoading(false);
-  }, [showLoader]);
+    hideLoader();
+  }, [showLoader, hideLoader]);
 
   // Ejecutar checkAuth solo una vez al montar el componente
   useEffect(() => {
@@ -47,16 +48,25 @@ export const AuthProvider = ({ children }) => {
       console.log('AuthContext: Llamando a authService.login con:', credentials.email);
       // No mostrar animación aquí, se maneja desde el componente Login
       const data = await apiLogin(credentials.email, credentials.password);
-      
-      // Guarda token en localStorage (aunque esto ya lo hace authService)
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      const token = data?.token || data?.data?.token;
+      if (token) {
+        localStorage.setItem('token', token);
+        setIsAuthenticated(true);
+        setUser(data.user || data?.data?.user || null);
+        setLoading(false);
+        hideLoader();
+        return data;
+      } else if (data && (data.message === 'Invalid credentials' || data?.data?.message === 'Invalid credentials')) {
+        setLoading(false);
+        hideLoader();
+        setError('Credenciales inválidas. Verifica tu email y contraseña.');
+        throw new Error('Credenciales inválidas');
+      } else {
+        setLoading(false);
+        hideLoader();
+        setError('La respuesta del servidor no incluye un token válido.');
+        throw new Error('La respuesta del servidor no incluye un token válido.');
       }
-      
-      setIsAuthenticated(true);
-      setUser(data.user || null);
-      setLoading(false);
-      return data;
     } catch (err) {
       const errorMessage = err.message || 'Error al iniciar sesión';
       console.error('Error en login (AuthContext):', errorMessage, err);
@@ -64,6 +74,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setLoading(false);
+      hideLoader();
       throw err;
     }
   };
@@ -71,7 +82,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Mostrar animación durante el cierre de sesión
-      await showLoader(2000, 'Cerrando sesión...');
+      await showLoader(800, 'Cerrando sesión...');
       apiLogout();
       setIsAuthenticated(false);
       setUser(null);
