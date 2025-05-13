@@ -1,8 +1,10 @@
+import { API_ROUTES } from '../config/config';
+
 const fetchUserInfo = async () => {
   try {
     setUserInfo(prev => ({ ...prev, isLoading: true }));
     // Hacer la petición al endpoint correcto de auth
-    const response = await api.get('/auth/users/info');
+    const response = await api.get(API_ROUTES.AUTH.USER_INFO);
     if (response && (response.username || response.data?.username)) {
       // El backend devuelve 'username' y 'role'
       const userData = response.username ? response : response.data;

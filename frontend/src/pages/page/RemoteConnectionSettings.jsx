@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useRemoteConnection } from '../../context/RemoteConnectionContext';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, Typography, TextField, Button, Switch, FormControlLabel, Box, Alert, Divider, Paper, Grid } from '@mui/material';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
@@ -23,13 +22,23 @@ const RemoteConnectionSettings = () => {
   const [message, setMessage] = useState({ text: '', type: 'info' });
   
   // Check if user can access this feature
-  if (!canUseRemoteConnection()) {
+  const canAccess = canUseRemoteConnection();
+  console.log('Resultado de verificación de acceso a RemoteConnectionSettings:', {
+    canAccess,
+    userRole: user?.role,
+    isRemoteEnabled
+  });
+
+  if (!canAccess) {
     return (
       <Card sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
         <CardContent>
           <Alert severity="error">
-            No tienes permisos para acceder a esta función. Solo administradores y superadministradores pueden configurar conexiones remotas.
+            No tienes permisos para acceder a esta función. Solo los usuarios con rol de Superadministrador y Administrador pueden configurar conexiones remotas.
           </Alert>
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Tu rol actual es: {user?.role || 'No detectado'}
+          </Typography>
         </CardContent>
       </Card>
     );

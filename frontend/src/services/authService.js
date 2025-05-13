@@ -86,19 +86,27 @@ export const login = async (email, password, apiClient) => {
     // Usamos el cliente API proporcionado o caemos en el predeterminado
     const client = apiClient || api;
     
-    // Cambia la ruta a la correcta
+    console.log('Intentando login con:', { email, password: '********' });
+    console.log('URL:', API_ROUTES.AUTH.LOGIN);
+    
+    // Realizar la solicitud POST
     const response = await client.post(API_ROUTES.AUTH.LOGIN, { email, password });
     
-    // response YA ES data por el interceptor
-    if (response && response.token) {
-      localStorage.setItem('token', response.token);
-      // También guarda el refresh token si tu API lo proporciona
-      if (response.refreshToken) {
-        localStorage.setItem('refreshToken', response.refreshToken);
-      }
-    }
+    // Asegurarnos de obtener los datos correctamente de response.data
+    const data = response.data;
     
-    return response;
+    console.log('Respuesta de login:', data);
+    
+    if (data && data.token) {
+      localStorage.setItem('token', data.token);
+      // También guarda el refresh token si tu API lo proporciona
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+      return data;
+    } else {
+      throw new Error('La respuesta no contiene un token válido');
+    }
   } catch (error) {
     console.error('Error en authService.login:', error);
     if (error.response?.status === 401) {

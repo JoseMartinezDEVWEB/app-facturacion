@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuración base de la API
 const api = axios.create({
-  baseURL: 'http://localhost:4500/api',
+  baseURL: 'http://localhost:4000/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -59,8 +59,8 @@ export const userApi = {
   
   login: async (credentials) => {
     try {
-      // CORREGIDO: Usar /login en lugar de /users/login que da 404
-      const response = await api.post('/login', credentials);
+      // Usar la ruta correcta para el login
+      const response = await api.post('/auth/login', credentials);
       // Guardar token automáticamente
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);

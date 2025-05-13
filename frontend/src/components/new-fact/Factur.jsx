@@ -14,6 +14,7 @@ import BuscarProduct from './BuscarProduct';
 import InvoicePreviewModal from './InvoicePreviewModal';
 import BusinessInfoSettings from './BusinessInfoSettings';
 import printJS from 'print-js';
+import { API_ROUTES } from '../../config/config';
 
 const API_URL = 'http://localhost:4500/api';
 
@@ -721,7 +722,7 @@ const POSSystem = () => {
         if (!localStorage.getItem('currentUser')) {
           try {
             // Intentar obtener la información del usuario actual
-            const userResponse = await axios.get(`${API_URL}/auth/users/info`);
+            const userResponse = await axios.get(API_ROUTES.AUTH.USER_INFO);
             if (userResponse && userResponse.data) {
               const userData = {
                 name: userResponse.data.username || userResponse.data.name || 'Cajero',
@@ -1505,7 +1506,7 @@ const POSSystem = () => {
         onPrint={() => {}}
         invoiceData={currentInvoice}
         businessInfo={businessInfo}
-        printConfig={true}
+        printConfig={printConfig}
         onSave={handleOpenSettings}
       />
       

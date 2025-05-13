@@ -3,7 +3,19 @@ import { motion } from 'framer-motion';
 import Card from '../common/Card';
 import { TrendingUp } from 'lucide-react';
 
-const BalanceNeto = ({ data = { hoy: 0, esteMes: 0 } }) => {
+const BalanceNeto = ({ data = { hoy: 0, esteMes: 0 }, isFallback }) => {
+  // Validación de datos
+  const isValid = data && typeof data.hoy === 'number' && typeof data.esteMes === 'number';
+  if (!isValid) {
+    return (
+      <Card title="Balance Neto" icon={TrendingUp} color="green">
+        <div className="text-center text-gray-500 py-8">
+          {isFallback ? "Datos de ejemplo en uso." : "Datos no disponibles."}
+        </div>
+      </Card>
+    );
+  }
+
   // Aseguramos que los valores sean números
   const hoy = typeof data.hoy === 'number' ? data.hoy : 0;
   const esteMes = typeof data.esteMes === 'number' ? data.esteMes : 0;

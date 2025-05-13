@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext.jsx';
 import { LoadingProvider } from './context/LoadingContext.jsx';
 import { BusinessProvider } from './context/BusinessContext.jsx';
-import { RemoteConnectionProvider } from './context/RemoteConnectionContext.jsx';
 import Loader from './components/Loader.jsx';
 import AppRoutes from './AppRoutes';
 
@@ -52,9 +51,7 @@ const App = () => (
   <LoadingProvider>
     <AuthProvider>
       <BusinessProvider>
-        <RemoteConnectionProvider>
-          <AppRoutes />
-        </RemoteConnectionProvider>
+        <AppRoutes />
       </BusinessProvider>
     </AuthProvider>
   </LoadingProvider>

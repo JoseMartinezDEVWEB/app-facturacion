@@ -9,7 +9,7 @@ import axios from 'axios';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 // Configuración de axios para las solicitudes API
-const apiUrl = 'http://localhost:4500/api';
+const apiUrl = 'http://localhost:4000/api';
 
 const VentasDiariasChart = () => {
   const [showAllSales, setShowAllSales] = useState(false);

@@ -86,7 +86,7 @@ const AppRoutes = () => {
           <Route 
             path="configuracion" 
             element={
-              <ProtectedRoute roles={['admin', 'encargado']}> 
+              <ProtectedRoute roles={['superadmin', 'admin', 'encargado']}> 
                 <BusinessSettings />
               </ProtectedRoute>
             }
@@ -95,7 +95,7 @@ const AppRoutes = () => {
           <Route 
             path="conexion-remota" 
             element={
-              <ProtectedRoute roles={['admin', 'superadmin']}> 
+              <ProtectedRoute roles={['superadmin', 'admin']}> 
                 <RemoteConnectionSettings />
               </ProtectedRoute>
             }

@@ -144,7 +144,7 @@ app.get('/api/printers', (req, res) => {
 });
 
 // Forzar puerto 4500 para solucionar conflicto con puerto 4000
-const port = process.env.PORT || 4500;
+const port = process.env.PORT 
 
 // Manejadores globales para excepciones y promesas no manejadas
 process.on('uncaughtException', (err) => {

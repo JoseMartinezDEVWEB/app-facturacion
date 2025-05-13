@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { deleteExpense } from '../../services/expenseService';
 
-const GastoList = ({ gastos, isLoading, onRefresh, onEdit }) => {
+const GastoList = ({ gastos = [], isLoading, onRefresh, onEdit }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDeductible, setFilterDeductible] = useState('all');
@@ -11,8 +11,11 @@ const GastoList = ({ gastos, isLoading, onRefresh, onEdit }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   
   // Filtrar gastos por término de búsqueda, categoría, opción de descuento y periodo
-  const filteredGastos = gastos.filter((gasto) => {
-    const matchesSearch = gasto.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredGastos = Array.isArray(gastos) ? gastos.filter((gasto) => {
+    // Verificar si gasto es un objeto válido
+    if (!gasto) return false;
+    
+    const matchesSearch = gasto.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (gasto.description && gasto.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = filterCategory === '' || gasto.category === filterCategory;
     
@@ -31,27 +34,46 @@ const GastoList = ({ gastos, isLoading, onRefresh, onEdit }) => {
       (!gasto.deductFromSales && filterDeductionPeriod !== 'all');
     
     return matchesSearch && matchesCategory && matchesDeductible && matchesDeductionPeriod;
-  });
+  }) : [];
   
   // Formatear fecha
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return 'Fecha desconocida';
+    try {
+      const options = { year: 'numeric', month: 'short', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (error) {
+      console.error('Error al formatear fecha:', error);
+      return 'Fecha inválida';
+    }
   };
   
   // Formatear monto
   const formatAmount = (amount) => {
-    return `RD$ ${amount.toFixed(2)}`;
+    if (amount === undefined || amount === null) return 'RD$ 0.00';
+    try {
+      return `RD$ ${Number(amount).toFixed(2)}`;
+    } catch (error) {
+      console.error('Error al formatear monto:', error);
+      return 'RD$ 0.00';
+    }
   };
   
   // Manejar eliminación de gasto
   const handleDelete = async (id) => {
+    if (!id) {
+      alert('Error: ID de gasto no válido');
+      return;
+    }
+    
     if (window.confirm('¿Estás seguro de que deseas eliminar este gasto?')) {
       setIsDeleting(true);
       try {
         await deleteExpense(id);
         // Actualizar la lista llamando a la función onRefresh pasada como prop
-        onRefresh && onRefresh();
+        if (typeof onRefresh === 'function') {
+          onRefresh();
+        }
       } catch (error) {
         console.error('Error al eliminar el gasto:', error);
         alert('Error al eliminar el gasto. Por favor, intenta de nuevo.');
@@ -165,41 +187,41 @@ const GastoList = ({ gastos, isLoading, onRefresh, onEdit }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredGastos.map((gasto) => (
                 <motion.tr 
-                  key={gasto._id}
+                  key={gasto?._id || Math.random().toString()}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{gasto.name}</div>
-                    {gasto.description && (
+                    <div className="text-sm font-medium text-gray-900">{gasto?.name || 'Sin nombre'}</div>
+                    {gasto?.description && (
                       <div className="text-sm text-gray-500 truncate max-w-xs">
                         {gasto.description}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-red-600">{formatAmount(gasto.amount)}</div>
+                    <div className="text-sm font-medium text-red-600">{formatAmount(gasto?.amount)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                      ${gasto.category === 'Operativo' ? 'bg-blue-100 text-blue-800' :
-                        gasto.category === 'Material' ? 'bg-green-100 text-green-800' :
-                        gasto.category === 'Servicio' ? 'bg-purple-100 text-purple-800' :
+                      ${gasto?.category === 'Operativo' ? 'bg-blue-100 text-blue-800' :
+                        gasto?.category === 'Material' ? 'bg-green-100 text-green-800' :
+                        gasto?.category === 'Servicio' ? 'bg-purple-100 text-purple-800' :
                         'bg-gray-100 text-gray-800'}`}
                     >
-                      {gasto.category}
+                      {gasto?.category || 'Sin categoría'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {gasto.deductFromSales ? (
+                    {gasto?.deductFromSales ? (
                       <div>
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                           Descontado
                         </span>
                         <span className="mt-1 block px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {gasto.deductionPeriod === 'day' ? 'Diario' : 'Mensual'}
+                          {gasto?.deductionPeriod === 'day' ? 'Diario' : 'Mensual'}
                         </span>
                       </div>
                     ) : (
@@ -209,21 +231,21 @@ const GastoList = ({ gastos, isLoading, onRefresh, onEdit }) => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {gasto.paymentMethod}
+                    {gasto?.paymentMethod || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(gasto.date)}
+                    {formatDate(gasto?.date)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
-                      onClick={() => onEdit(gasto)}
+                      onClick={() => typeof onEdit === 'function' ? onEdit(gasto) : null}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                       disabled={isDeleting}
                     >
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(gasto._id)}
+                      onClick={() => handleDelete(gasto?._id)}
                       className="text-red-600 hover:text-red-900"
                       disabled={isDeleting}
                     >

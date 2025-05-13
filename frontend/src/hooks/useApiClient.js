@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useRemoteConnection } from '../context/RemoteConnectionContext';
 import createApiInstance from '../config/dynamicAxiosConfig';
 
 /**
@@ -7,8 +6,6 @@ import createApiInstance from '../config/dynamicAxiosConfig';
  * @returns {Object} Configured Axios instance
  */
 const useApiClient = () => {
-  const { getApiUrl } = useRemoteConnection();
-  
   // Create a memoized API client based on the current API URL
   const apiClient = useMemo(() => {
     const baseURL = getApiUrl();

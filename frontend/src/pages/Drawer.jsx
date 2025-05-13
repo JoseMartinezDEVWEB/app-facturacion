@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../config/apis';
+import { API_ROUTES } from '../config/config';
 
 // Elementos del menú de navegación
 const menuItems = [
@@ -85,11 +86,15 @@ const Drawer = ({ isOpen, onClose }) => {
       setUserInfo(prev => ({ ...prev, isLoading: true }));
       
       // Hacer la petición al endpoint correcto de auth
-      const response = await api.get('/auth/users/info');
+      const response = await api.get(API_ROUTES.AUTH.USER_INFO);
       
       if (response && response.data) {
         // El backend devuelve 'username' y 'role'
         const { username, role } = response.data;
+        
+        // Log para depuración
+        console.log('Información de usuario obtenida:', { username, role });
+        
         // Almacenar en localStorage para persistencia
         localStorage.setItem('userName', username);
         localStorage.setItem('userRole', role);
@@ -106,9 +111,14 @@ const Drawer = ({ isOpen, onClose }) => {
       console.error('Error al obtener información del usuario:', error);
       
       // Usar datos de localStorage si la API falla
+      const storedName = localStorage.getItem('userName') || '';
+      const storedRole = localStorage.getItem('userRole') || '';
+      
+      console.log('Usando información almacenada en localStorage:', { nombre: storedName, rol: storedRole });
+      
       setUserInfo({
-        nombre: localStorage.getItem('userName') || '',
-        rol: localStorage.getItem('userRole') || '',
+        nombre: storedName,
+        rol: storedRole,
         isLoading: false
       });
       

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { login as apiLogin, logout as apiLogout } from '../services/authService';
+import { loginUser, logoutUser, isUserAuthenticated } from '../services/loginService';
 import { useLoading } from './LoadingContext';
 
 // Crear contexto
@@ -45,28 +46,27 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('AuthContext: Llamando a authService.login con:', credentials.email);
-      // No mostrar animación aquí, se maneja desde el componente Login
-      const data = await apiLogin(credentials.email, credentials.password);
-      const token = data?.token || data?.data?.token;
-      if (token) {
-        localStorage.setItem('token', token);
-        setIsAuthenticated(true);
-        setUser(data.user || data?.data?.user || null);
-        setLoading(false);
-        hideLoader();
-        return data;
-      } else if (data && (data.message === 'Invalid credentials' || data?.data?.message === 'Invalid credentials')) {
-        setLoading(false);
-        hideLoader();
-        setError('Credenciales inválidas. Verifica tu email y contraseña.');
-        throw new Error('Credenciales inválidas');
-      } else {
-        setLoading(false);
-        hideLoader();
-        setError('La respuesta del servidor no incluye un token válido.');
-        throw new Error('La respuesta del servidor no incluye un token válido.');
+      console.log('AuthContext: Iniciando proceso de login con:', credentials.email);
+      
+      // Usar el nuevo servicio de login
+      const data = await loginUser(credentials);
+      console.log('Respuesta del login procesada:', data);
+      
+      // Extraer información del usuario
+      const userInfo = data.user || null;
+      console.log('Información de usuario obtenida en login:', userInfo);
+      
+      if (userInfo && userInfo.role) {
+        // Asegurarnos de guardar el rol correctamente
+        localStorage.setItem('userRole', userInfo.role);
+        console.log('Rol de usuario guardado:', userInfo.role);
       }
+      
+      setIsAuthenticated(true);
+      setUser(userInfo);
+      setLoading(false);
+      hideLoader();
+      return data;
     } catch (err) {
       const errorMessage = err.message || 'Error al iniciar sesión';
       console.error('Error en login (AuthContext):', errorMessage, err);
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // Mostrar animación durante el cierre de sesión
       await showLoader(800, 'Cerrando sesión...');
-      apiLogout();
+      logoutUser();
       setIsAuthenticated(false);
       setUser(null);
     } catch (error) {

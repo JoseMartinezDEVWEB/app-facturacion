@@ -8,11 +8,11 @@ export const API_URL = API_BASE_URL;
 export const API_ROUTES = {
   // Autenticación
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register-admin',
-    LOGOUT: '/auth/logout',
-    VALIDATE: '/auth/validate',
-    USER_INFO: '/auth/users/info'
+    LOGIN: '/api/auth/login',
+    REGISTER: '/api/auth/register-admin',
+    LOGOUT: '/api/auth/logout',
+    VALIDATE: '/api/auth/validate',
+    USER_INFO: '/api/auth/users/info'
   },
   
   // Clientes
@@ -53,6 +53,8 @@ export const API_ROUTES = {
   // Retenciones
   RETENTIONS: '/retentions'
 };
+
+
 
 // Configuración de la aplicación
 export const APP_CONFIG = {

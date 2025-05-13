@@ -40,8 +40,12 @@ const Login = () => {
     }
 
     try {
+      console.log('Intentando login con:', formData.email);
+      
       // Intentar login (la animación ya se está mostrando)
-      await login(formData);
+      const response = await login(formData);
+      console.log('Login exitoso, respuesta:', response);
+      
       setLoginSuccess(true);
       loaderPromise.then(() => {
         hideLoader();
@@ -49,8 +53,16 @@ const Login = () => {
       });
     } catch (err) {
       hideLoader();
-      const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
-      setError(ERROR_MESSAGES[errorMessage] || errorMessage);
+      console.error('Error detallado del login:', err);
+      
+      // Manejo de errores simplificado para trabajar con el nuevo servicio
+      if (err.message) {
+        const errorKey = err.message;
+        setError(ERROR_MESSAGES[errorKey] || errorKey);
+      } else {
+        setError('Error desconocido al iniciar sesión');
+      }
+      
       setRetryCount(prev => prev + 1);
       setLoading(false);
     }

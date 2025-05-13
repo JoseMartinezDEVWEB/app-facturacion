@@ -4,7 +4,19 @@ import { motion } from 'framer-motion';
 import Card from '../common/Card';
 import { FileText } from 'lucide-react';
 
-const FacturasCreadas = ({ data = { hoy: 0, esteMes: 0 } }) => {
+const FacturasCreadas = ({ data = { hoy: 0, esteMes: 0 }, isFallback }) => {
+  // Validación de datos
+  const isValid = data && typeof data.hoy === 'number' && typeof data.esteMes === 'number';
+  if (!isValid) {
+    return (
+      <Card title="Facturas Creadas" icon={FileText} color="blue">
+        <div className="text-center text-gray-500 py-8">
+          {isFallback ? "Datos de ejemplo en uso." : "Datos no disponibles."}
+        </div>
+      </Card>
+    );
+  }
+
   // Animación para números
   const numberVariants = {
     hidden: { opacity: 0, y: 10 },
