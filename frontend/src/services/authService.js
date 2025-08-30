@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { API_ROUTES } from '../config/config';
 import api from '../config/axiosConfig';
 
@@ -67,11 +66,13 @@ export const getToken = () => {
  * Verifica si el token es válido haciendo una solicitud al servidor
  * @returns {Promise<boolean>} True si el token es válido, false en caso contrario
  */
-export const validateToken = async () => {
+export const validateToken = async (apiClient) => {
   try {
     if (!isAuthenticated()) return false;
     
-    const response = await axios.get('/api/auth/validate', getAuthConfig());
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
+    const response = await client.get('/auth/validate', getAuthConfig());
     return response.data.valid;
   } catch (error) {
     console.error('Error validando token:', error);
@@ -80,20 +81,32 @@ export const validateToken = async () => {
 }; 
 
 
-export const login = async (email, password) => {
+export const login = async (email, password, apiClient) => {
   try {
-    // Cambia la ruta a la correcta
-    const response = await api.post(API_ROUTES.AUTH.LOGIN, { email, password });
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
     
-    if (response.data && response.data.token) {
-      localStorage.setItem('token', response.data.token);
+    console.log('Intentando login con:', { email, password: '********' });
+    console.log('URL:', API_ROUTES.AUTH.LOGIN);
+    
+    // Realizar la solicitud POST
+    const response = await client.post(API_ROUTES.AUTH.LOGIN, { email, password });
+    
+    // Asegurarnos de obtener los datos correctamente de response.data
+    const data = response.data;
+    
+    console.log('Respuesta de login:', data);
+    
+    if (data && data.token) {
+      localStorage.setItem('token', data.token);
       // También guarda el refresh token si tu API lo proporciona
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
       }
+      return data;
+    } else {
+      throw new Error('La respuesta no contiene un token válido');
     }
-    
-    return response.data;
   } catch (error) {
     console.error('Error en authService.login:', error);
     if (error.response?.status === 401) {
@@ -109,7 +122,7 @@ export const logout = () => {
   return true;
 };
 
-export const refreshToken = async () => {
+export const refreshToken = async (apiClient) => {
   try {
     const refreshToken = localStorage.getItem('refreshToken');
     
@@ -117,7 +130,9 @@ export const refreshToken = async () => {
       throw new Error('No hay refresh token disponible');
     }
     
-    const response = await api.post('/auth/refresh-token', { refreshToken });
+    // Usamos el cliente API proporcionado o caemos en el predeterminado
+    const client = apiClient || api;
+    const response = await client.post('/auth/refresh-token', { refreshToken });
     
     if (response.data && response.data.token) {
       localStorage.setItem('token', response.data.token);

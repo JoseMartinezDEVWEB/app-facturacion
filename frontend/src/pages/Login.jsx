@@ -15,15 +15,6 @@ const Login = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // useEffect para redirección personalizada después de la autenticación
-  useEffect(() => {
-    // Solo si la autenticación fue exitosa y no estamos cargando
-    if (!authLoading && isAuthenticated && loginSuccess) {
-      // La redirección ocurrirá desde la función de handleLogin
-      // después de que termine la animación de carga
-    }
-  }, [isAuthenticated, navigate, authLoading, loginSuccess]);
-
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -38,7 +29,7 @@ const Login = () => {
     setLoginSuccess(false);
 
     // Mostrar la animación inmediatamente al hacer clic en el botón
-    const loaderPromise = showLoader(3000, 'Iniciando sesión...');
+    const loaderPromise = showLoader(2000, 'Iniciando sesión...');
 
     // Validaciones básicas
     if (!formData.email || !formData.password) {
@@ -49,27 +40,29 @@ const Login = () => {
     }
 
     try {
+      console.log('Intentando login con:', formData.email);
+      
       // Intentar login (la animación ya se está mostrando)
-      await login(formData);
+      const response = await login(formData);
+      console.log('Login exitoso, respuesta:', response);
       
-      // Marcar login como exitoso
       setLoginSuccess(true);
-      
-      // Esperar a que termine la animación antes de redirigir
       loaderPromise.then(() => {
+        hideLoader();
         navigate('/dashboard');
       });
-      
     } catch (err) {
-      console.error('Error de login:', err);
+      hideLoader();
+      console.error('Error detallado del login:', err);
       
-      // No es necesario ocultar el loader aquí ya que se ocultará automáticamente después de 3 segundos
+      // Manejo de errores simplificado para trabajar con el nuevo servicio
+      if (err.message) {
+        const errorKey = err.message;
+        setError(ERROR_MESSAGES[errorKey] || errorKey);
+      } else {
+        setError('Error desconocido al iniciar sesión');
+      }
       
-      // Manipular errores comunes
-      const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
-      setError(ERROR_MESSAGES[errorMessage] || errorMessage);
-      
-      // Incrementar contador de intentos
       setRetryCount(prev => prev + 1);
       setLoading(false);
     }

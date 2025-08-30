@@ -26,10 +26,14 @@ const Gastos = () => {
     
     try {
       const response = await getExpenses();
-      setGastos(response.data);
+      // Asegurar que response.data sea un array antes de actualizar el estado
+      const gastosList = response?.data || [];
+      console.log('Gastos obtenidos:', gastosList);
+      setGastos(Array.isArray(gastosList) ? gastosList : []);
     } catch (err) {
       console.error('Error al cargar los gastos:', err);
       setError('Error al cargar los gastos. Por favor, intenta de nuevo.');
+      setGastos([]); // Asegurar que gastos sea siempre un array
     } finally {
       setIsLoading(false);
     }

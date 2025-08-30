@@ -1,12 +1,17 @@
-import axios from 'axios';
+import api from '../config/axiosConfig';
 
 const API_URL = '/business';
 
 // Obtener información del negocio
 export const getBusinessInfo = async () => {
   try {
-    const response = await axios.get(`${API_URL}/info`);
-    return response.data;
+    const response = await api.get(`/business/info`);
+    // Si la respuesta ya es un objeto con success/data, retorna tal cual
+    if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+      return response;
+    }
+    // Si no, adapta la respuesta para evitar bucles
+    return { success: true, data: response };
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener datos del negocio' };
   }
@@ -29,7 +34,7 @@ export const saveBusinessInfo = async (businessData) => {
       formData.append('logo', businessData.logo);
     }
     
-    const response = await axios.post(`${API_URL}/info`, formData, {
+    const response = await api.post(`${API_URL}/info`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

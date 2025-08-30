@@ -1,19 +1,9 @@
 // src/services/api.js
-import axios from 'axios';
+import api from './axiosConfig';
 import { mockData } from './dashboardData';
+import { API_ROUTES } from './config';
 
-// Configuración global
-const API_URL = 'http://localhost:4500/api';
 const USE_MOCK_DATA = false; // Cambiar a false para usar la API real
-
-// Creamos la instancia de axios
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
 
 // Interceptor para añadir el token y hacer logging
 api.interceptors.request.use(
@@ -44,7 +34,7 @@ api.interceptors.response.use(
     console.error('Error completo:', error);
     
     if (error.response) {
-      console.error(`Error ${error.response.status} en ${error.config.url}:`, error.response.data);
+      console.error(`Error ${error.response.status} en ${error.config?.url || 'URL no disponible'}:`, error.response.data);
       
       // Solo redirigir a login en caso de error 401 si no estamos en la página de login
       if (error.response.status === 401 && !window.location.pathname.includes('login')) {
@@ -71,17 +61,28 @@ api.interceptors.response.use(
 export const authService = {
   login: async (credentials) => {
     try {
-      const response = await api.post('/login', credentials);
+      console.log('Intentando login en serviceApi con:', credentials.email);
+      
+      // Asegurar que tenemos correo y contraseña
+      if (!credentials.email || !credentials.password) {
+        throw new Error('Se requiere correo y contraseña');
+      }
+      
+      // CORREGIDO: Usar la ruta correcta para login
+      const response = await api.post('/auth/login', credentials);
+      
+      console.log('Respuesta de login en serviceApi:', response);
       
       if (response.token) {
         localStorage.setItem('token', response.token);
         console.log('Token guardado en localStorage');
         return response;
       } else {
+        console.error('No se recibió token en la respuesta:', response);
         throw new Error('No se recibió token de autenticación');
       }
     } catch (error) {
-      console.error('Error en login:', error);
+      console.error('Error completo en login (servicesApi):', error);
       throw error;
     }
   },
@@ -94,7 +95,7 @@ export const authService = {
     
     try {
       // Intenta obtener información del usuario para verificar la sesión
-      return await api.get('/users/info');
+      return await api.get(API_ROUTES.AUTH.USER_INFO);
     } catch (error) {
       console.error('Error al verificar sesión:', error);
       throw error;
@@ -175,7 +176,9 @@ export const dashboardService = {
       }
       
       console.log(`Obteniendo datos del dashboard para periodo: ${apiPeriod}`);
-      const response = await api.get(`/dashboard/data?period=${apiPeriod}&t=${timestamp}`);
+      // Asegurar que la URL sea válida
+      const endpoint = `/api/dashboard/data?period=${apiPeriod}&t=${timestamp}`;
+      const response = await api.get(endpoint);
       
       // Verificar y normalizar los datos recibidos
       if (response && response.success) {
@@ -246,7 +249,8 @@ export const dashboardService = {
     try {
       // Añadir timestamp para evitar problemas de caché
       const timestamp = new Date().getTime();
-      const response = await api.get(`/dashboard/stats?period=${period}&t=${timestamp}`);
+      const endpoint = `/api/dashboard/stats?period=${period}&t=${timestamp}`;
+      const response = await api.get(endpoint);
       
       if (response && response.success && response.data) {
         return response.data;
@@ -288,7 +292,8 @@ export const dashboardService = {
 export const clienteService = {
   getClientesDeuda: async () => {
     try {
-      const response = await api.get('/clientes/deudas');
+      const endpoint = '/api/clientes/deudas';
+      const response = await api.get(endpoint);
       
       if (response && response.success) {
         return response.clientes || [];
@@ -310,7 +315,8 @@ export const clienteService = {
   
   saldarDeuda: async (clienteId) => {
     try {
-      const response = await api.post('/clientes/saldar-deuda', { clienteId });
+      const endpoint = '/api/clientes/saldar-deuda';
+      const response = await api.post(endpoint, { clienteId });
       return response;
     } catch (error) {
       console.error('Error al saldar deuda del cliente:', error);
@@ -320,7 +326,8 @@ export const clienteService = {
   
   abonarDeuda: async (clienteId, montoAbono) => {
     try {
-      const response = await api.post('/clientes/abonar-deuda', { 
+      const endpoint = '/api/clientes/abonar-deuda';
+      const response = await api.post(endpoint, { 
         clienteId, 
         montoAbono 
       });
@@ -332,7 +339,7 @@ export const clienteService = {
   }
 };
 
- export const getTopProducts = async (params = {}) => {
+export const getTopProducts = async (params = {}) => {
   try {
     // Parámetros de paginación y filtro
     const { 
@@ -357,9 +364,8 @@ export const clienteService = {
     }
     
     // Endpoint para obtener productos con paginación
-    const response = await api.get(
-      `/dashboard/top-products?period=${apiPeriod}&page=${page}&limit=${limit}&sortBy=${sortBy}&order=${order}&t=${timestamp}`
-    );
+    const endpoint = `/api/dashboard/top-products?period=${apiPeriod}&page=${page}&limit=${limit}&sortBy=${sortBy}&order=${order}&t=${timestamp}`;
+    const response = await api.get(endpoint);
     
     if (response && response.success) {
       return {
@@ -412,8 +418,5 @@ export const clienteService = {
     };
   }
 }
-
-
-
 
 export default api;

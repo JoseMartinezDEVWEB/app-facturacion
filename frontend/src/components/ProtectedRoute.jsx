@@ -3,6 +3,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Loader from './Loader.jsx';
 
 /**
  * Componente para proteger rutas basado en autenticación y roles.
@@ -14,10 +15,9 @@ const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
 
-  // Mostrar un spinner o nada mientras se verifica el estado de autenticación
+  // Mostrar el loader global mientras se verifica la autenticación
   if (loading) {
-    // Puedes poner aquí un spinner de carga global o simplemente null
-    return <div>Verificando autenticación...</div>;
+    return <Loader message="Verificando sesión..." />;
   }
 
   // Si no está autenticado, redirigir al login

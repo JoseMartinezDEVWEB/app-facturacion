@@ -20,7 +20,10 @@ import quoteRoutes from './routes/quoteRoutes.js';
 import retentionRoutes from './routes/retentionRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
 import creditPurchaseRoutes from './routes/creditPurchaseRoutes.js';
+import remoteAccessRoutes from './routes/remoteAccessRoutes.js';
+import healthRoutes from './routes/health.js';
 import { auditMiddleware } from './middleware/auditMiddleware.js';
+import os from 'os'
 
 import path from "path";
 import morgan from "morgan";
@@ -36,9 +39,12 @@ app.use(morgan('dev'))
 
 app.use(express.urlencoded({ extended: true }));
 
-// Simplificamos la configuración CORS para desarrollo
+const allowedOrigins = process.env.NODE_ENV === 'development'
+  ? '*'
+  : (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []);
+
 app.use(cors({
-  origin: '*', // Permitir cualquier origen en desarrollo
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -59,28 +65,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// Headers adicionales de CORS - OPCIONAL: eliminar esta sección si ya funciona el CORS arriba
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Manejo de solicitudes preflight OPTIONS
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
-
 // Middleware para acceso remoto con autenticación HTTP básica
 // Solo se activa cuando se accede desde una IP que no es localhost
 app.use((req, res, next) => {
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.includes('192.168.') || req.ip.includes('10.') || req.ip.includes('172.');
     
     // Si es una solicitud OPTIONS o es localhost, permitir sin autenticación
-    if (req.method === 'OPTIONS' || isLocalhost || req.path.startsWith('/api/auth')) {
+    if (req.method === 'OPTIONS' || isLocalhost || req.path.startsWith('/api/auth') || req.path.includes('/health-check')) {
         return next();
     }
     
@@ -116,6 +107,7 @@ app.use((req, res, next) => {
     next();
 });
 
+// Rutas de la API
 app.use("/api/auth", userRouter);
 app.use("/api/products", productRouter);
 app.use("/api/categories", categoryRouter);
@@ -135,6 +127,10 @@ app.use('/api/retentions', retentionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/credit-purchases', creditPurchaseRoutes);
 
+// Rutas para acceso remoto y estado del sistema
+app.use('/api/remote', remoteAccessRoutes);
+app.use('/api', healthRoutes);
+
 // Endpoint para obtener impresoras (simulado)
 app.get('/api/printers', (req, res) => {
   // En un entorno real, esto se conectaría al sistema operativo o a un servicio de impresión
@@ -148,7 +144,7 @@ app.get('/api/printers', (req, res) => {
 });
 
 // Forzar puerto 4500 para solucionar conflicto con puerto 4000
-const port = 4500;
+const port = process.env.PORT 
 
 // Manejadores globales para excepciones y promesas no manejadas
 process.on('uncaughtException', (err) => {
@@ -177,5 +173,23 @@ app.use((err, req, res, next) => {
   });
 });
 
+
 // Iniciar servidor en puerto fijo
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`Local: http://localhost:${port}`);
+  
+  // Mostrar direcciones IP disponibles
+  
+
+  const networkInterfaces = Object.values(os.networkInterfaces())
+    .flat()
+    .filter(details => details.family === 'IPv4' && !details.internal);
+    
+  if (networkInterfaces.length > 0) {
+    console.log('Available on your network:');
+    networkInterfaces.forEach(net => {
+      console.log(`  http://${net.address}:${port}`);
+    });
+  }
+});

@@ -34,7 +34,7 @@ const PrintConfirmationModal = ({
     setPrinterMessage('Verificando dispositivos de impresión...');
     
     try {
-      const response = await axios.get(`${API_URL}/api/printers`);
+      const response = await axios.get(`${API_URL}/printers`);
       setPrinters(response.data || []);
       
       if (response.data && response.data.length > 0) {
@@ -54,12 +54,11 @@ const PrintConfirmationModal = ({
   };
 
   const handlePrint = () => {
-    if (!selectedPrinter) {
+    if (!selectedPrinter && printers.length > 0) {
       setError('Por favor seleccione una impresora');
       return;
     }
-    
-    onConfirm(selectedPrinter, copies);
+    onConfirm(selectedPrinter || 'local', copies);
   };
 
   const handleIncreaseCopies = () => {
@@ -222,9 +221,9 @@ const PrintConfirmationModal = ({
                   
                   <button
                     onClick={handlePrint}
-                    disabled={loading || !selectedPrinter}
+                    disabled={loading}
                     className={`px-4 py-2 rounded-md text-white flex items-center justify-center
-                      ${loading || !selectedPrinter ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}
+                      ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}
                     `}
                   >
                     <Printer size={18} className="mr-2" />

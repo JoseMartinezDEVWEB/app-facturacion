@@ -1,41 +1,62 @@
-/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from 'react';
 import { getExpenseSummary, getExpenses } from '../../services/expenseService';
+import { motion } from 'framer-motion';
 
 const GastoResumen = () => {
-  const [resumen, setResumen] = useState({
-    totalExpenses: 0,
-    totalDeductibleExpenses: 0,
-    totalNonDeductibleExpenses: 0,
-    totalSales: 0,
-    balance: 0
-  });
+  const [resumen, setResumen] = useState(null);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Cargar los datos del resumen al montar el componente
+  
   useEffect(() => {
     fetchResumen();
     fetchMonthlyExpenses();
   }, []);
-
+  
+  // Formatear fecha actual
+  const formatDate = () => {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date().toLocaleDateString('es-ES', options);
+  };
+  
   // Función para cargar el resumen desde la API
   const fetchResumen = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
+      console.log('Obteniendo resumen de gastos...');
       const response = await getExpenseSummary();
-      setResumen(response.data);
-    } catch (error) {
-      console.error('Error al cargar el resumen:', error);
-      setError('No se pudo cargar el resumen. Por favor, intenta de nuevo.');
+      console.log('Respuesta del resumen:', response);
+      
+      // Asegurar que response.data no sea undefined y establecer valores predeterminados
+      const data = response?.data || {};
+      setResumen({
+        totalExpenses: data.totalExpenses || 0,
+        totalDeductibleExpenses: data.totalDeductibleExpenses || 0,
+        totalNonDeductibleExpenses: data.totalNonDeductibleExpenses || 0,
+        totalSales: data.totalSales || 0,
+        balance: data.balance || 0,
+        expensesDetail: data.expensesDetail || { deductible: [], nonDeductible: [] }
+      });
+    } catch (err) {
+      console.error('Error al cargar el resumen de gastos:', err);
+      setError('Error al cargar el resumen. Por favor, intenta de nuevo.');
+      // Establecer valores predeterminados en caso de error
+      setResumen({
+        totalExpenses: 0,
+        totalDeductibleExpenses: 0,
+        totalNonDeductibleExpenses: 0,
+        totalSales: 0,
+        balance: 0,
+        expensesDetail: { deductible: [], nonDeductible: [] }
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   // Función para cargar los gastos mensuales usando el endpoint de filtrado existente
   const fetchMonthlyExpenses = async () => {
     try {
@@ -51,72 +72,46 @@ const GastoResumen = () => {
       });
       
       // Calcular el total manualmente sumando los montos de todos los gastos
-      const totalAmount = response.data && Array.isArray(response.data) 
-        ? response.data.reduce((total, expense) => total + expense.amount, 0)
-        : (response.data && Array.isArray(response.data.data) 
-            ? response.data.data.reduce((total, expense) => total + expense.amount, 0)
-            : 0);
-      
-      setMonthlyExpenses(totalAmount || 0);
-    } catch (error) {
-      console.error('Error al cargar los gastos mensuales:', error);
-      // No mostramos error aquí para no duplicar mensajes
+      // Manejar todos los casos posibles de estructura de respuesta
+      const expenses = response?.data || [];
+      if (Array.isArray(expenses)) {
+        const total = expenses.reduce((sum, expense) => {
+          const amount = expense?.amount || 0;
+          return sum + Number(amount);
+        }, 0);
+        setMonthlyExpenses(total);
+      } else {
+        console.error('La respuesta no es un array:', expenses);
+        setMonthlyExpenses(0);
+      }
+    } catch (err) {
+      console.error('Error al cargar los gastos mensuales:', err);
+      setMonthlyExpenses(0);
     }
   };
   
   // Formatear montos a RD$
   const formatAmount = (amount) => {
-    return `RD$ ${amount.toFixed(2)}`;
+    return `RD$ ${Number(amount || 0).toFixed(2)}`;
   };
   
   // Determinar el color del balance según su valor
   const getBalanceColor = (balance) => {
-    if (balance > 0) return 'text-green-600';
-    if (balance < 0) return 'text-red-600';
+    const numBalance = Number(balance || 0);
+    if (numBalance > 0) return 'text-green-600';
+    if (numBalance < 0) return 'text-red-600';
     return 'text-gray-600';
   };
   
-  // Formatear la fecha actual
-  const formatDate = () => {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return now.toLocaleDateString(undefined, options);
-  };
-
-  // Formatear el mes actual
-  const formatMonth = () => {
-    const now = new Date();
-    const options = { year: 'numeric', month: 'long' };
-    return now.toLocaleDateString(undefined, options);
-  };
-  
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-gray-100 animate-pulse p-6 rounded-lg h-48"></div>
-        ))}
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg">
-        <p className="font-bold">Error</p>
-        <p>{error}</p>
-        <button 
-          onClick={() => {
-            fetchResumen();
-            fetchMonthlyExpenses();
-          }}
-          className="mt-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-        >
-          Reintentar
-        </button>
-      </div>
-    );
-  }
+  // Evitar acceder a propiedades de undefined usando valores predeterminados
+  const {
+    totalExpenses = 0,
+    totalDeductibleExpenses = 0,
+    totalNonDeductibleExpenses = 0,
+    totalSales = 0,
+    balance = 0,
+    expensesDetail = { deductible: [] }
+  } = resumen || {};
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -127,96 +122,116 @@ const GastoResumen = () => {
             <h3 className="text-lg font-semibold mb-1">Gastos de Hoy</h3>
             <p className="text-xs text-red-100">{formatDate()}</p>
           </div>
-          <div className="p-2 bg-red-400 rounded-full">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
+          <svg className="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
         </div>
-        <p className="text-3xl font-bold mt-4">{formatAmount(resumen.totalExpenses || 0)}</p>
-        
-        {/* Resumen de gastos descontables y no descontables */}
-        <div className="mt-4 pt-4 border-t border-red-400">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm">Gastos descontables:</span>
-            <span className="font-semibold">{formatAmount(resumen.totalDeductibleExpenses || 0)}</span>
+        {isLoading ? (
+          <div className="h-20 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm">Gastos no descontables:</span>
-            <span className="font-semibold">{formatAmount(resumen.totalNonDeductibleExpenses || 0)}</span>
+        ) : (
+          <div className="mt-4">
+            <div className="text-3xl font-bold mb-2">{formatAmount(totalExpenses)}</div>
+            <div className="text-sm text-red-100 flex justify-between">
+              <span>Descontables: {formatAmount(totalDeductibleExpenses)}</span>
+              <span>No descontables: {formatAmount(totalNonDeductibleExpenses)}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
-      {/* Gastos del mes (anteriormente Ventas de hoy) */}
-      <div className="bg-purple-500 text-white p-6 rounded-lg shadow">
+      {/* Gastos del mes */}
+      <div className="bg-indigo-500 text-white p-6 rounded-lg shadow">
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-lg font-semibold mb-1">Gastos del Mes</h3>
-            <p className="text-xs text-purple-100">{formatMonth()}</p>
+            <p className="text-xs text-indigo-100">{new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })}</p>
           </div>
-          <div className="p-2 bg-purple-400 rounded-full">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-          </div>
+          <svg className="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
         </div>
-        <p className="text-3xl font-bold mt-4">{formatAmount(monthlyExpenses || 0)}</p>
-        
-        {/* Mostrar promedio diario si está disponible */}
-        <div className="mt-4 pt-4 border-t border-purple-400">
-          <div className="flex justify-between items-center">
-            <span className="text-sm">Promedio diario:</span>
-            <span className="font-semibold">
-              {formatAmount(monthlyExpenses / (new Date().getDate() || 1))}
-            </span>
+        {isLoading ? (
+          <div className="h-20 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-4">
+            <div className="text-3xl font-bold mb-2">{formatAmount(monthlyExpenses)}</div>
+          </div>
+        )}
       </div>
       
-      {/* Balance del día (considera solo gastos descontables) */}
+      {/* Balance */}
       <div className="bg-white p-6 rounded-lg shadow">
-  <div className="flex justify-between items-start">
-    <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">Balance del Día</h3>
-      <p className="text-xs text-gray-500">{formatDate()}</p>
-      <p className="text-xs text-blue-500 mt-1">*Solo considera gastos descontables</p>
-    </div>
-    <div className="p-2 bg-gray-100 rounded-full">
-      <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-      </svg>
-    </div>
-  </div>
-  <p className={`text-3xl font-bold mt-4 ${getBalanceColor(resumen.balance || 0)}`}>
-    {formatAmount(resumen.balance || 0)}
-  </p>
-  <div className="flex justify-between mt-4">
-    <div>
-      <p className="text-sm text-gray-500">Ingresos</p>
-      <p className="text-lg font-semibold text-green-600">{formatAmount(resumen.totalSales || 0)}</p>
-    </div>
-    <div>
-      <p className="text-sm text-gray-500">Gastos Descontables</p>
-      <p className="text-lg font-semibold text-red-600">{formatAmount(resumen.totalDeductibleExpenses || 0)}</p>
-    </div>
-  </div>
-  
-  {/* Mostrar los gastos descontados si hay información detallada */}
-  {resumen.expensesDetail && resumen.expensesDetail.deductible && resumen.expensesDetail.deductible.length > 0 && (
-    <div className="mt-4 pt-4 border-t border-gray-200">
-      <p className="text-sm font-medium text-gray-700 mb-2">Gastos descontados hoy:</p>
-      <ul className="text-sm">
-        {resumen.expensesDetail.deductible.map((expense) => (
-          <li key={expense.id} className="flex justify-between py-1">
-            <span>{expense.name}</span>
-            <span className="text-red-600">{formatAmount(expense.amount)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )}
-</div>
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-semibold mb-1 text-gray-800">Balance</h3>
+            <p className="text-xs text-gray-500">{formatDate()}</p>
+          </div>
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        {isLoading ? (
+          <div className="h-20 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Ventas:</span>
+              <span className="text-green-600 font-medium">{formatAmount(totalSales)}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Gastos:</span>
+              <span className="text-red-600 font-medium">{formatAmount(totalExpenses)}</span>
+            </div>
+            <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between">
+              <span className="text-gray-700 font-semibold">Balance:</span>
+              <span className={`${getBalanceColor(balance)} font-bold`}>{formatAmount(balance)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Detalle de gastos descontables (condicional) */}
+      {expensesDetail && expensesDetail.deductible && expensesDetail.deductible.length > 0 && (
+        <div className="md:col-span-3 bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Detalle de Gastos Descontables</h3>
+          {isLoading ? (
+            <div className="h-20 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <div className="overflow-hidden">
+              <ul className="text-sm">
+                {expensesDetail.deductible.map((expense, index) => (
+                  <li key={expense?.id || index} className="flex justify-between py-1">
+                    <span>{expense?.name || 'Sin nombre'}</span>
+                    <span className="text-red-600">{formatAmount(expense?.amount || 0)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Mostrar errores */}
+      {error && (
+        <div className="md:col-span-3 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
+          <p className="font-semibold">Error al cargar los datos</p>
+          <p>{error}</p>
+          <button 
+            onClick={fetchResumen} 
+            className="mt-2 text-sm text-blue-700 hover:underline"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
     </div>
   );
 };

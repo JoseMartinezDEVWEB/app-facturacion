@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useLoading } from '../context/LoadingContext';
 
 import Drawer from './Drawer';
-import DashboardFull from '../components/dashboard';
+import DashboardFull from '../components/dashboardNew';
 
 const Dashboard = () => {
   const navigate = useNavigate();

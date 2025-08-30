@@ -13,6 +13,8 @@ import TotalClientes from './TotalClientes';
 import { RefreshCw } from 'lucide-react';
 import VentasDiariasChart from './VentasDiariasChart';
 
+
+
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,9 +160,9 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Tarjetas de estadísticas */}
         <div className="md:col-span-1 space-y-6">
-          <TotalVentas data={dashboardData?.totalVentas} />
-          <BalanceNeto data={dashboardData?.balanceNeto} />
-          <FacturasCreadas data={dashboardData?.facturasCreadas} />
+          <TotalVentas data={dashboardData?.totalVentas} isFallback={isUsingMock || !!error} />
+          <BalanceNeto data={dashboardData?.balanceNeto} isFallback={isUsingMock || !!error} />
+          <FacturasCreadas data={dashboardData?.facturasCreadas} isFallback={isUsingMock || !!error} />
         </div>
 
         {/* Gráfico de ventas diarias - Pasar los datos del dashboard */}

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { login as apiLogin, logout as apiLogout } from '../services/authService';
+import { loginUser, logoutUser, isUserAuthenticated } from '../services/loginService';
 import { useLoading } from './LoadingContext';
 
 // Crear contexto
@@ -11,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
-  const { showLoader } = useLoading();
+  const { showLoader, hideLoader } = useLoading();
 
   // Usar useCallback para evitar recreaciones innecesarias de la función
   const checkAuth = useCallback(async () => {
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         // Mostrar animación durante la verificación de autenticación
-        await showLoader(2000, 'Verificando sesión...');
+        await showLoader(800, 'Verificando sesión...');
         setIsAuthenticated(true);
         // Intentar obtener información del usuario si es necesario
       } catch (error) {
@@ -33,7 +34,8 @@ export const AuthProvider = ({ children }) => {
     }
     
     setLoading(false);
-  }, [showLoader]);
+    hideLoader();
+  }, [showLoader, hideLoader]);
 
   // Ejecutar checkAuth solo una vez al montar el componente
   useEffect(() => {
@@ -44,18 +46,26 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('AuthContext: Llamando a authService.login con:', credentials.email);
-      // No mostrar animación aquí, se maneja desde el componente Login
-      const data = await apiLogin(credentials.email, credentials.password);
+      console.log('AuthContext: Iniciando proceso de login con:', credentials.email);
       
-      // Guarda token en localStorage (aunque esto ya lo hace authService)
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      // Usar el nuevo servicio de login
+      const data = await loginUser(credentials);
+      console.log('Respuesta del login procesada:', data);
+      
+      // Extraer información del usuario
+      const userInfo = data.user || null;
+      console.log('Información de usuario obtenida en login:', userInfo);
+      
+      if (userInfo && userInfo.role) {
+        // Asegurarnos de guardar el rol correctamente
+        localStorage.setItem('userRole', userInfo.role);
+        console.log('Rol de usuario guardado:', userInfo.role);
       }
       
       setIsAuthenticated(true);
-      setUser(data.user || null);
+      setUser(userInfo);
       setLoading(false);
+      hideLoader();
       return data;
     } catch (err) {
       const errorMessage = err.message || 'Error al iniciar sesión';
@@ -64,6 +74,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setLoading(false);
+      hideLoader();
       throw err;
     }
   };
@@ -71,8 +82,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Mostrar animación durante el cierre de sesión
-      await showLoader(2000, 'Cerrando sesión...');
-      apiLogout();
+      await showLoader(800, 'Cerrando sesión...');
+      logoutUser();
       setIsAuthenticated(false);
       setUser(null);
     } catch (error) {

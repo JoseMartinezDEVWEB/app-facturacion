@@ -1,0 +1,7 @@
+{
+  "watch": ["src"],
+  "ignore": [
+    "../frontend/.env.local",
+    "../frontend/public/backend-config.json"
+  ]
+} 

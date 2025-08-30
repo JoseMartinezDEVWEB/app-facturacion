@@ -6,7 +6,7 @@ import { ShoppingBag, BarChart2 } from 'lucide-react';
 import { useState } from 'react';
 import DetallesVentasModal from './DetallesVentasModal';
 
-const TotalVentas = ({ data = { hoy: 0, esteMes: 0, pendientesHoy: 0, pendientesMes: 0 } }) => {
+const TotalVentas = ({ data = { hoy: 0, esteMes: 0, pendientesHoy: 0, pendientesMes: 0 }, isFallback }) => {
   const [showModal, setShowModal] = useState(false);
   
   // Aseguramos que los valores sean números para evitar errores
@@ -20,6 +20,18 @@ const TotalVentas = ({ data = { hoy: 0, esteMes: 0, pendientesHoy: 0, pendientes
     hidden: { opacity: 0, scale: 0.8 },
     visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } }
   };
+
+  // Validación de datos
+  const isValid = data && typeof data.hoy === 'number' && typeof data.esteMes === 'number';
+  if (!isValid) {
+    return (
+      <Card title="Total Ventas" icon={ShoppingBag} color="green">
+        <div className="text-center text-gray-500 py-8">
+          {isFallback ? "Datos de ejemplo en uso." : "Datos no disponibles."}
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <>

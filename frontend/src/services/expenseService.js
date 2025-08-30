@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { getAuthConfig } from './authService';
+import api from '../config/axiosConfig';
+import { API_ROUTES } from '../config/config';
 
-const API_URL = '/expenses';
+const API_URL = API_ROUTES.EXPENSES;
 
 // Obtener todos los gastos con filtros opcionales
 export const getExpenses = async (filters = {}) => {
@@ -15,9 +17,10 @@ export const getExpenses = async (filters = {}) => {
       }
     });
     
-    const response = await axios.get(`${API_URL}?${queryParams.toString()}`, getAuthConfig());
-    return response.data;
+    const response = await api.get(`${API_URL}?${queryParams.toString()}`);
+    return response;
   } catch (error) {
+    console.error('Error en getExpenses:', error);
     throw error.response?.data || { message: 'Error al obtener los gastos' };
   }
 };
@@ -25,8 +28,8 @@ export const getExpenses = async (filters = {}) => {
 // Obtener un gasto específico
 export const getExpense = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/${id}`, getAuthConfig());
-    return response.data;
+    const response = await api.get(`${API_URL}/${id}`);
+    return response;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener el gasto' };
   }
@@ -35,13 +38,15 @@ export const getExpense = async (id) => {
 // Crear un nuevo gasto
 export const createExpense = async (expenseData, isFormData = false) => {
   try {
-    let config = getAuthConfig();
+    let config = {};
     if (isFormData) {
-      config.headers['Content-Type'] = 'multipart/form-data';
+      config.headers = {
+        'Content-Type': 'multipart/form-data'
+      };
     }
     
-    const response = await axios.post(API_URL, expenseData, config);
-    return response.data;
+    const response = await api.post(API_URL, expenseData, config);
+    return response;
   } catch (error) {
     throw error.response?.data || { message: 'Error al crear el gasto' };
   }
@@ -50,13 +55,15 @@ export const createExpense = async (expenseData, isFormData = false) => {
 // Actualizar un gasto existente
 export const updateExpense = async (id, expenseData, isFormData = false) => {
   try {
-    let config = getAuthConfig();
+    let config = {};
     if (isFormData) {
-      config.headers['Content-Type'] = 'multipart/form-data';
+      config.headers = {
+        'Content-Type': 'multipart/form-data'
+      };
     }
     
-    const response = await axios.put(`${API_URL}/${id}`, expenseData, config);
-    return response.data;
+    const response = await api.put(`${API_URL}/${id}`, expenseData, config);
+    return response;
   } catch (error) {
     throw error.response?.data || { message: 'Error al actualizar el gasto' };
   }
@@ -65,8 +72,8 @@ export const updateExpense = async (id, expenseData, isFormData = false) => {
 // Eliminar un gasto
 export const deleteExpense = async (id) => {
   try {
-    const response = await axios.delete(`${API_URL}/${id}`, getAuthConfig());
-    return response.data;
+    const response = await api.delete(`${API_URL}/${id}`);
+    return response;
   } catch (error) {
     throw error.response?.data || { message: 'Error al eliminar el gasto' };
   }
@@ -75,8 +82,8 @@ export const deleteExpense = async (id) => {
 // Obtener gastos mensuales
 export const getMonthlyExpenses = async () => {
   try {
-    const response = await axios.get(`${API_URL}/monthly`, getAuthConfig());
-    return response.data;
+    const response = await api.get(`${API_URL}/monthly`);
+    return response;
   } catch (error) {
     throw error.response?.data || { message: 'Error al obtener los gastos mensuales' };
   }
@@ -85,9 +92,10 @@ export const getMonthlyExpenses = async () => {
 // Obtener el resumen de gastos
 export const getExpenseSummary = async () => {
   try {
-    const response = await axios.get(`${API_URL}/summary`, getAuthConfig());
-    return response.data;
+    const response = await api.get(`${API_URL}/summary`);
+    return response;
   } catch (error) {
+    console.error('Error en getExpenseSummary:', error);
     throw error.response?.data || { message: 'Error al obtener el resumen de gastos' };
   }
 };
